@@ -129,9 +129,8 @@ static void guiTask(void *pvParameter) {
         char time_[50], voltage[50];
         ds3231_get_time(&dev, &time);
 
-        // snprintf(time_, 50, "%d    %d    %d", read_switch(SWITCH_UP), read_switch(SWITCH_DOWN), read_switch(SWITCH_SELECT));
         snprintf(time_, 50, "%02d:%02d:%02d", time.tm_hour, time.tm_min, time.tm_sec);
-        float volt = (float)battery_percentage()/1000;
+        float volt = battery_percentage();
         snprintf(voltage, 50, "%.4f V", volt);
 
         lv_label_set_text(label1, time_);
@@ -139,6 +138,8 @@ static void guiTask(void *pvParameter) {
 
         lv_obj_align(label1, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
         lv_obj_align(label2, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
+
+        ESP_LOGI(TAG, "debug %s %f", time_, volt);
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 
