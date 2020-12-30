@@ -26,8 +26,7 @@
 #include "esp_system.h"
 #include "driver/gpio.h"
 
-/* Littlevgl specific */
-#include "lvgl/lvgl.h"
+#include "lvgl.h"
 #include "lvgl_helpers.h"
 
 /*********************
