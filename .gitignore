@@ -90,6 +90,8 @@ CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
 build/
+sdkconfig
+sdkconfig.old
 
 ### CMake Patch ###
 # External projects
