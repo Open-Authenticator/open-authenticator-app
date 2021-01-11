@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <ds3231.h>
+#include "ntp.h"
+#include "wifi_handler_station.h"
 
 #include "oa_power.h"
 #include "oa_pin_defs.h"
@@ -41,12 +43,12 @@
 static void lv_tick_task(void *arg);
 static void guiTask(void *pvParameter);
 
-
 /**********************
  *   APPLICATION MAIN
  **********************/
-void app_main() {
-    
+void app_main()
+{
+
     init_load_switch();
     init_switches();
     activate_load_switch();
@@ -57,7 +59,7 @@ void app_main() {
     /* If you want to use a task to create the graphic, you NEED to create a Pinned task
      * Otherwise there can be problem such as memory corruption and so on.
      * NOTE: When not using Wi-Fi nor Bluetooth you can pin the guiTask to core 0 */
-    xTaskCreatePinnedToCore(guiTask, "gui", 4096*2, NULL, 0, NULL, 1);
+    xTaskCreatePinnedToCore(guiTask, "gui", 4096 * 2, NULL, 0, NULL, 1);
 }
 
 /* Creates a semaphore to handle concurrent call to lvgl stuff
@@ -65,12 +67,13 @@ void app_main() {
  * you should lock on the very same semaphore! */
 SemaphoreHandle_t xGuiSemaphore;
 
-static void guiTask(void *pvParameter) {
-    (void) pvParameter;
+static void guiTask(void *pvParameter)
+{
+    (void)pvParameter;
     xGuiSemaphore = xSemaphoreCreateMutex();
 
     lv_init();
-    
+
     /* Initialize SPI or I2C bus used by the drivers */
     lvgl_driver_init();
 
@@ -98,36 +101,44 @@ static void guiTask(void *pvParameter) {
 
     disp_drv.buffer = &disp_buf;
     lv_disp_drv_register(&disp_drv);
-    
+
     /* Create and start a periodic timer interrupt to call lv_tick_inc */
     const esp_timer_create_args_t periodic_timer_args = {
         .callback = &lv_tick_task,
-        .name = "periodic_gui"
-    };
+        .name = "periodic_gui"};
     esp_timer_handle_t periodic_timer;
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, LV_TICK_PERIOD_MS * 1000));
-    
+
     /* use a pretty small demo for monochrome displays */
     /* Get the current screen  */
-    lv_obj_t * scr = lv_disp_get_scr_act(NULL);
+    lv_obj_t *scr = lv_disp_get_scr_act(NULL);
 
     /*Create a Label on the currently active screen*/
-    lv_obj_t * label1 =  lv_label_create(scr, NULL);
-    lv_obj_t * label2 = lv_label_create(scr, NULL);
+    lv_obj_t *label1 = lv_label_create(scr, NULL);
+    lv_obj_t *label2 = lv_label_create(scr, NULL);
 
     struct tm time;
 
-    ESP_ERROR_CHECK(i2cdev_init());
-    i2c_dev_t dev;
-    memset(&dev, 0, sizeof(i2c_dev_t));
+    rtc_ext_init(RTC_SDA, RTC_SCL);
 
-    ESP_ERROR_CHECK(ds3231_init_desc(&dev, 1, RTC_SDA, RTC_SCL));
+    ESP_ERROR_CHECK_WITHOUT_ABORT(start_wifi_station("{\"c\":1,\"s\":[\"D-sdfs\"],\"p\":[\"dshfbsjhfb\"]}"));
+    char time_[50] = " ";
+    for (int i = 0 ; i < 10; i++)
 
-    while (1) 
+    snprintf(time_, 50, "ssid: %s", get_wifi_station_info()->ssid);
+    
+    lv_label_set_text(label1, time_);
+    lv_obj_align(label1, scr, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
+
+    ntp_get_time();
+    stop_wifi_station();
+
+    while (1)
     {
         char time_[50], voltage[50];
-        ds3231_get_time(&dev, &time);
+        time_t temp = rtc_ext_get_time();
+        time = *localtime(&temp);
 
         snprintf(time_, 50, "%02d:%02d:%02d", time.tm_hour, time.tm_min, time.tm_sec);
         float volt = battery_percentage();
@@ -146,11 +157,13 @@ static void guiTask(void *pvParameter) {
     vTaskDelete(NULL);
 }
 
-static void lv_tick_task(void *arg) {
-    (void) arg;
-    if (pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)) {
-            lv_task_handler();
-            xSemaphoreGive(xGuiSemaphore);
-       }    
+static void lv_tick_task(void *arg)
+{
+    (void)arg;
+    if (pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY))
+    {
+        lv_task_handler();
+        xSemaphoreGive(xGuiSemaphore);
+    }
     lv_tick_inc(LV_TICK_PERIOD_MS);
 }
