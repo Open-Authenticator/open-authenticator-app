@@ -117,19 +117,21 @@ static void guiTask(void *pvParameter)
     /*Create a Label on the currently active screen*/
     lv_obj_t *label1 = lv_label_create(scr, NULL);
     lv_obj_t *label2 = lv_label_create(scr, NULL);
+    lv_label_set_text(label1, " ");
+    lv_label_set_text(label2, " ");
 
     struct tm time;
 
     rtc_ext_init(RTC_SDA, RTC_SCL);
 
-    ESP_ERROR_CHECK_WITHOUT_ABORT(start_wifi_station("{\"c\":1,\"s\":[\"D-sdfs\"],\"p\":[\"dshfbsjhfb\"]}"));
+    ESP_ERROR_CHECK_WITHOUT_ABORT(start_wifi_station("{\"c\":1,\"s\":[\"D_rtr\"],\"p\":[\"rrtetetetete\"]}"));
     char time_[50] = " ";
     for (int i = 0 ; i < 10; i++)
 
     snprintf(time_, 50, "ssid: %s", get_wifi_station_info()->ssid);
     
     lv_label_set_text(label1, time_);
-    lv_obj_align(label1, scr, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
+    lv_obj_align(label1, scr, LV_ALIGN_CENTER, 0, 0);
 
     ntp_get_time();
     stop_wifi_station();
@@ -150,7 +152,6 @@ static void guiTask(void *pvParameter)
         lv_obj_align(label1, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
         lv_obj_align(label2, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
 
-        ESP_LOGI(TAG, "debug %s %f", time_, volt);
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 
