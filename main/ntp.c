@@ -17,6 +17,7 @@ void ntp_get_time(void)
     }
     time(&now);
     localtime_r(&now, &timeinfo);
+    sntp_stop();
 }
 
 void initialize_sntp(void)
