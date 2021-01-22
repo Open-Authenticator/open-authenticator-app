@@ -7,6 +7,7 @@
 #include <string.h>
 #include <ds3231.h>
 #include "ntp.h"
+#include "totp.h"
 #include "wifi_handler_station.h"
 
 #include "oa_power.h"
@@ -42,6 +43,7 @@
  **********************/
 static void lv_tick_task(void *arg);
 static void guiTask(void *pvParameter);
+static void wifi_ntp_task(void *arg);
 
 /**********************
  *   APPLICATION MAIN
@@ -55,6 +57,8 @@ void app_main()
 
     config_adc1();
     characterize_adc1();
+
+    xTaskCreatePinnedToCore(wifi_ntp_task, "ntp", 4096 * 2, NULL, 0, NULL, 0);
 
     /* If you want to use a task to create the graphic, you NEED to create a Pinned task
      * Otherwise there can be problem such as memory corruption and so on.
@@ -92,7 +96,8 @@ static void guiTask(void *pvParameter)
     lv_disp_drv_t disp_drv;
     lv_disp_drv_init(&disp_drv);
     disp_drv.flush_cb = disp_driver_flush;
-
+    // https://forum.lvgl.io/t/how-to-rotate-a-screen-in-the-app/911/4
+    // disp_drv.rotated = 1;
     /* When using a monochrome display we need to register the callbacks:
      * - rounder_cb
      * - set_px_cb */
@@ -120,34 +125,29 @@ static void guiTask(void *pvParameter)
     lv_label_set_text(label1, " ");
     lv_label_set_text(label2, " ");
 
-    struct tm time;
+    struct tm time_now;
 
     rtc_ext_init(RTC_SDA, RTC_SCL);
 
-    ESP_ERROR_CHECK_WITHOUT_ABORT(start_wifi_station("{\"c\":1,\"s\":[\"D_rtr\"],\"p\":[\"rrtetetetete\"]}"));
-    char time_[50] = " ";
-    for (int i = 0 ; i < 10; i++)
-
-    snprintf(time_, 50, "ssid: %s", get_wifi_station_info()->ssid);
+    char *key = "JBSWY3DPEHPK3PXP";
+    char res[10];
     
-    lv_label_set_text(label1, time_);
-    lv_obj_align(label1, scr, LV_ALIGN_CENTER, 0, 0);
-
-    ntp_get_time();
-    stop_wifi_station();
+    struct timeval tm = {.tv_sec = rtc_ext_get_time()};
+    settimeofday(&tm, NULL);
 
     while (1)
     {
-        char time_[50], voltage[50];
+        char time_[50];
         time_t temp = rtc_ext_get_time();
-        time = *localtime(&temp);
+        time_now = *localtime(&temp);
 
-        snprintf(time_, 50, "%02d:%02d:%02d", time.tm_hour, time.tm_min, time.tm_sec);
-        float volt = battery_percentage();
-        snprintf(voltage, 50, "%.4f V", volt);
+        snprintf(time_, 50, "%02d:%02d:%02d", time_now.tm_hour, time_now.tm_min, time_now.tm_sec);
+        totp_init(MBEDTLS_MD_SHA1);
+        totp_generate(key, ((unsigned)time(NULL)) / 30, 6, res);
+        totp_free();
 
         lv_label_set_text(label1, time_);
-        lv_label_set_text(label2, voltage);
+        lv_label_set_text(label2, res);
 
         lv_obj_align(label1, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
         lv_obj_align(label2, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
@@ -167,4 +167,20 @@ static void lv_tick_task(void *arg)
         xSemaphoreGive(xGuiSemaphore);
     }
     lv_tick_inc(LV_TICK_PERIOD_MS);
+}
+
+static void wifi_ntp_task(void *arg)
+{
+    while (1)
+    {
+        while (1)
+        {
+            ESP_ERROR_CHECK_WITHOUT_ABORT(start_wifi_station("{\"c\":1,\"s\":[\"D-Link_\"],\"p\":[\"vedant160201\"]}"));
+            ntp_get_time();
+            stop_wifi_station();
+
+            vTaskDelay(86400 / portTICK_PERIOD_MS);
+        }
+        vTaskDelay(3600 / portTICK_PERIOD_MS);
+    }
 }
