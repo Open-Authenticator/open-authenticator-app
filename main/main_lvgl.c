@@ -32,22 +32,13 @@
 #include "lvgl.h"
 #include "lvgl_helpers.h"
 
-/*********************
- *      DEFINES
- *********************/
 #define TAG "demo"
 #define LV_TICK_PERIOD_MS 1
 
-/**********************
- *  STATIC PROTOTYPES
- **********************/
 static void lv_tick_task(void *arg);
 static void guiTask(void *pvParameter);
 static void wifi_ntp_task(void *arg);
 
-/**********************
- *   APPLICATION MAIN
- **********************/
 void app_main()
 {
 
@@ -60,50 +51,80 @@ void app_main()
 
     xTaskCreatePinnedToCore(wifi_ntp_task, "ntp", 4096 * 2, NULL, 0, NULL, 0);
 
-    /* If you want to use a task to create the graphic, you NEED to create a Pinned task
-     * Otherwise there can be problem such as memory corruption and so on.
-     * NOTE: When not using Wi-Fi nor Bluetooth you can pin the guiTask to core 0 */
     xTaskCreatePinnedToCore(guiTask, "gui", 4096 * 2, NULL, 0, NULL, 1);
 }
 
-/* Creates a semaphore to handle concurrent call to lvgl stuff
- * If you wish to call *any* lvgl function from other threads/tasks
- * you should lock on the very same semaphore! */
-SemaphoreHandle_t xGuiSemaphore;
+int read_key()
+{
+    if (read_switch(SWITCH_UP))
+    {
+        return LV_KEY_UP;
+    }
+    else if (read_switch(SWITCH_DOWN))
+    {
+        return LV_KEY_DOWN;
+    }
+    else if (read_switch(SWITCH_SELECT))
+    {
+        return LV_KEY_ENTER;
+    }
+
+    return 0;
+}
+
+bool encoder_with_buttons(lv_indev_drv_t *drv, lv_indev_data_t *data)
+{
+    int key_id = read_key();
+
+    if (key_id > 0)
+    {
+        // ESP_LOGI("button_handler", "pressed key %d", key_id);
+        data->key = key_id;
+        data->state = LV_INDEV_STATE_PR;
+    }
+    else
+    {
+        data->state = LV_INDEV_STATE_REL;
+    }
+
+    return false;
+}
+
+static void button_event_handler_cb(lv_obj_t *obj, lv_event_t event)
+{
+    uint32_t *key_id = NULL;
+    switch (event)
+    {
+        case LV_EVENT_PRESSED:
+            ESP_LOGI("button_cb", "Clicked button - enter");
+            lv_obj_set_hidden(obj, !lv_obj_get_hidden(obj));
+            break;
+
+        case LV_EVENT_KEY:
+            key_id = (uint32_t *)lv_event_get_data();
+            ESP_LOGI("button_cb", "Clicked button - %u", *key_id);
+            break;
+    }
+}
 
 static void guiTask(void *pvParameter)
 {
-    (void)pvParameter;
-    xGuiSemaphore = xSemaphoreCreateMutex();
 
     lv_init();
-
-    /* Initialize SPI or I2C bus used by the drivers */
     lvgl_driver_init();
 
     static lv_color_t buf1[DISP_BUF_SIZE];
-
     static lv_color_t *buf2 = NULL;
-
     static lv_disp_buf_t disp_buf;
-
     uint32_t size_in_px = DISP_BUF_SIZE;
 
-    /* Initialize the working buffer depending on the selected display.
-     * NOTE: buf2 == NULL when using monochrome displays. */
     lv_disp_buf_init(&disp_buf, buf1, buf2, size_in_px);
 
     lv_disp_drv_t disp_drv;
     lv_disp_drv_init(&disp_drv);
     disp_drv.flush_cb = disp_driver_flush;
-    // https://forum.lvgl.io/t/how-to-rotate-a-screen-in-the-app/911/4
-    // disp_drv.rotated = 1;
-    /* When using a monochrome display we need to register the callbacks:
-     * - rounder_cb
-     * - set_px_cb */
     disp_drv.rounder_cb = disp_driver_rounder;
     disp_drv.set_px_cb = disp_driver_set_px;
-
     disp_drv.buffer = &disp_buf;
     lv_disp_drv_register(&disp_drv);
 
@@ -115,7 +136,12 @@ static void guiTask(void *pvParameter)
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, LV_TICK_PERIOD_MS * 1000));
 
-    /* use a pretty small demo for monochrome displays */
+    lv_indev_drv_t indev_drv;
+    lv_indev_drv_init(&indev_drv);
+    indev_drv.type = LV_INDEV_TYPE_ENCODER;
+    indev_drv.read_cb = encoder_with_buttons;
+    lv_indev_t *my_indev = lv_indev_drv_register(&indev_drv);
+
     /* Get the current screen  */
     lv_obj_t *scr = lv_disp_get_scr_act(NULL);
 
@@ -124,14 +150,20 @@ static void guiTask(void *pvParameter)
     lv_obj_t *label2 = lv_label_create(scr, NULL);
     lv_label_set_text(label1, " ");
     lv_label_set_text(label2, " ");
+    lv_group_t *group1 = lv_group_create();
+    lv_obj_set_event_cb(label1, button_event_handler_cb);
+    lv_obj_set_event_cb(label2, button_event_handler_cb);
+    lv_group_add_obj(group1, label1);
+    lv_group_add_obj(group1, label2);
+    lv_indev_set_group(my_indev, group1);
+    lv_group_focus_obj(label1);
 
     struct tm time_now;
-
     rtc_ext_init(RTC_SDA, RTC_SCL);
 
     char *key = "JBSWY3DPEHPK3PXP";
     char res[10];
-    
+
     struct timeval tm = {.tv_sec = rtc_ext_get_time()};
     settimeofday(&tm, NULL);
 
@@ -160,12 +192,7 @@ static void guiTask(void *pvParameter)
 
 static void lv_tick_task(void *arg)
 {
-    (void)arg;
-    if (pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY))
-    {
-        lv_task_handler();
-        xSemaphoreGive(xGuiSemaphore);
-    }
+    lv_task_handler();
     lv_tick_inc(LV_TICK_PERIOD_MS);
 }
 
@@ -175,7 +202,7 @@ static void wifi_ntp_task(void *arg)
     {
         while (1)
         {
-            ESP_ERROR_CHECK_WITHOUT_ABORT(start_wifi_station("{\"c\":1,\"s\":[\"D-Link_\"],\"p\":[\"vedant160201\"]}"));
+            ESP_ERROR_CHECK_WITHOUT_ABORT(start_wifi_station("{\"c\":1,\"s\":[\"D-Li\"],\"p\":[\"fskdhd\"]}"));
             ntp_get_time();
             stop_wifi_station();
 
