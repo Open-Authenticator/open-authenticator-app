@@ -109,7 +109,6 @@ static void button_event_handler_cb(lv_obj_t *obj, lv_event_t event)
 
 static void guiTask(void *pvParameter)
 {
-
     lv_init();
     lvgl_driver_init();
 
