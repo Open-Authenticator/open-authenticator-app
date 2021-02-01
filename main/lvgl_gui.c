@@ -1,6 +1,5 @@
 #include "lvgl_gui.h"
 
-static lv_group_t *group_root = NULL;
 static lv_group_t *group_1 = NULL;
 static lv_group_t *group_2 = NULL;
 static lv_group_t *group_3 = NULL;
@@ -19,6 +18,8 @@ static lv_obj_t *label_ap_pass_group_4_1 = NULL;
 static lv_obj_t *label_ip_addr_group_4_2 = NULL;
 
 static lv_obj_t *scr = NULL;
+
+lv_indev_t *my_indev = NULL;
 
 static void lv_tick_task(void *arg)
 {
@@ -109,21 +110,21 @@ static void lvgl_gui_init_drivers()
     lv_indev_drv_init(&indev_drv);
     indev_drv.type = LV_INDEV_TYPE_ENCODER;
     indev_drv.read_cb = encoder_with_switches;
-    lv_indev_t *my_indev = lv_indev_drv_register(&indev_drv);
+    my_indev = lv_indev_drv_register(&indev_drv);
 }
 
 static void lvgl_gui_init_obj()
 {
     scr = lv_disp_get_scr_act(NULL);
 
-    static lv_obj_t *label_battery_group_root = lv_label_create(scr, NULL);
-    static lv_obj_t *label_alias_group_1 = lv_label_create(scr, NULL);
-    static lv_obj_t *label_code_group_1 = lv_label_create(scr, NULL);
-    static lv_obj_t *label_time_group_2 = lv_label_create(scr, NULL);
-    static lv_obj_t *label_sync_time_group_3 = lv_label_create(scr, NULL);
-    static lv_obj_t *label_ap_name_group_4_1 = lv_label_create(scr, NULL);
-    static lv_obj_t *label_ap_pass_group_4_1 = lv_label_create(scr, NULL);
-    static lv_obj_t *label_ip_addr_group_4_2 = lv_label_create(scr, NULL);
+    label_battery_group_root = lv_label_create(scr, NULL);
+    label_alias_group_1 = lv_label_create(scr, NULL);
+    label_code_group_1 = lv_label_create(scr, NULL);
+    label_time_group_2 = lv_label_create(scr, NULL);
+    label_sync_time_group_3 = lv_label_create(scr, NULL);
+    label_ap_name_group_4_1 = lv_label_create(scr, NULL);
+    label_ap_pass_group_4_1 = lv_label_create(scr, NULL);
+    label_ip_addr_group_4_2 = lv_label_create(scr, NULL);
 
     lv_label_set_text(label_battery_group_root, " ");
     lv_label_set_text(label_alias_group_1, " ");
@@ -134,23 +135,24 @@ static void lvgl_gui_init_obj()
     lv_label_set_text(label_ap_pass_group_4_1, " ");
     lv_label_set_text(label_ip_addr_group_4_2, " ");
 
-    // lv_obj_t *label1 = lv_label_create(scr, NULL);
-    // lv_obj_t *label2 = lv_label_create(scr, NULL);
-    // lv_label_set_text(label1, " ");
-    // lv_label_set_text(label2, " ");
+    group_1 = lv_group_create();
+    group_2 = lv_group_create();
+    group_3 = lv_group_create();
+    group_4 = lv_group_create();
+    group_4_1 = lv_group_create();
+    group_4_2 = lv_group_create();
 
-    lv_group_t *group1 = lv_group_create();
-    lv_obj_set_event_cb(label1, switch_event_handler_cb);
-    lv_obj_set_event_cb(label2, switch_event_handler_cb);
-    lv_group_add_obj(group1, label1);
-    lv_group_add_obj(group1, label2);
-    lv_indev_set_group(my_indev, group1);
-    lv_group_focus_obj(label1);
+    lv_obj_set_event_cb(label_alias_group_1, switch_event_handler_cb);
+    lv_obj_set_event_cb(label_code_group_1, switch_event_handler_cb);
+    lv_group_add_obj(group_1, label_alias_group_1);
+    lv_group_add_obj(group_1, label_code_group_1);
+
+    lv_indev_set_group(my_indev, group_1);
+    lv_group_focus_obj(label_alias_group_1);
 }
 
 void lvgl_gui_task()
 {
-
     struct tm time_now;
     rtc_ext_init(RTC_SDA, RTC_SCL);
 
@@ -159,6 +161,9 @@ void lvgl_gui_task()
 
     struct timeval tm = {.tv_sec = rtc_ext_get_time()};
     settimeofday(&tm, NULL);
+
+    lvgl_gui_init_drivers();
+    lvgl_gui_init_obj();
 
     while (1)
     {
@@ -171,11 +176,11 @@ void lvgl_gui_task()
         totp_generate(key, ((unsigned)time(NULL)) / 30, 6, res);
         totp_free();
 
-        lv_label_set_text(label1, time_);
-        lv_label_set_text(label2, res);
+        lv_label_set_text(label_alias_group_1, time_);
+        lv_label_set_text(label_code_group_1, res);
 
-        lv_obj_align(label1, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
-        lv_obj_align(label2, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
+        lv_obj_align(label_alias_group_1, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
+        lv_obj_align(label_code_group_1, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
 
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
