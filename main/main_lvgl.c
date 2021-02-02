@@ -46,6 +46,7 @@ void app_main()
 
     xTaskCreatePinnedToCore(wifi_ntp_task, "ntp", 4096 * 2, NULL, 0, NULL, 0);
     xTaskCreatePinnedToCore(lvgl_gui_task, "gui", 4096 * 2, NULL, 0, NULL, 1);
+    // lvgl_gui_task();
 }
 
 static void wifi_ntp_task(void *arg)
@@ -54,11 +55,11 @@ static void wifi_ntp_task(void *arg)
     {
         while (1)
         {
-            ESP_ERROR_CHECK_WITHOUT_ABORT(start_wifi_station("{\"c\":1,\"s\":[\"D-Li\"],\"p\":[\"fskdhd\"]}"));
+            ESP_ERROR_CHECK_WITHOUT_ABORT(start_wifi_station("{\"c\":1,\"s\":[\"D-\"],\"p\":[\"v\"]}"));
             ntp_get_time();
             stop_wifi_station();
 
-            vTaskDelay(86400 / portTICK_PERIOD_MS);
+            vTaskDelay(864000 / portTICK_PERIOD_MS);
         }
         vTaskDelay(3600 / portTICK_PERIOD_MS);
     }

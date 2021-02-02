@@ -1,11 +1,6 @@
 #include "lvgl_gui.h"
 
-static lv_group_t *group_1 = NULL;
-static lv_group_t *group_2 = NULL;
-static lv_group_t *group_3 = NULL;
-static lv_group_t *group_4 = NULL;
-static lv_group_t *group_4_1 = NULL;
-static lv_group_t *group_4_2 = NULL;
+static lv_group_t *group_root = NULL;
 
 static lv_obj_t *label_battery_group_root = NULL;
 static lv_obj_t *label_alias_group_1 = NULL;
@@ -21,6 +16,46 @@ static lv_obj_t *scr = NULL;
 
 lv_indev_t *my_indev = NULL;
 
+static int menu_id = 0;
+
+static void action_menu_page()
+{
+    lv_label_set_text(label_sync_time_group_3, LV_SYMBOL_LOOP);
+}
+static void set_menu_page()
+{
+    lv_obj_set_hidden(label_alias_group_1, true);
+    lv_obj_set_hidden(label_code_group_1, true);
+    lv_obj_set_hidden(label_time_group_2, true);
+    lv_obj_set_hidden(label_sync_time_group_3, true);
+    lv_obj_set_hidden(label_ap_name_group_4_1, true);
+    lv_obj_set_hidden(label_ap_pass_group_4_1, true);
+    lv_obj_set_hidden(label_ip_addr_group_4_2, true);
+
+    switch (menu_id)
+    {
+    case 0:
+        lv_obj_set_hidden(label_alias_group_1, false);
+        lv_obj_set_hidden(label_code_group_1, false);
+        break;
+
+    case 1:
+        lv_obj_set_hidden(label_time_group_2, false);
+        break;
+
+    case 2:
+        lv_obj_set_hidden(label_sync_time_group_3, false);
+        lv_label_set_text(label_sync_time_group_3, LV_SYMBOL_LOOP "\nSYNC TIME");
+        lv_obj_align(label_sync_time_group_3, NULL, LV_ALIGN_CENTER, 0, 0);
+        break;
+
+    case 3:
+        lv_obj_set_hidden(label_ap_name_group_4_1, false);
+        lv_obj_set_hidden(label_ap_pass_group_4_1, false);
+        lv_obj_set_hidden(label_ip_addr_group_4_2, false);
+        break;
+    }
+}
 static void lv_tick_task(void *arg)
 {
     lv_task_handler();
@@ -65,17 +100,25 @@ bool encoder_with_switches(lv_indev_drv_t *drv, lv_indev_data_t *data)
 static void switch_event_handler_cb(lv_obj_t *obj, lv_event_t event)
 {
     uint32_t *key_id = NULL;
-    switch (event)
+    if (event == LV_EVENT_PRESSED)
     {
-    case LV_EVENT_PRESSED:
         ESP_LOGI("button_cb", "Clicked button - enter");
-        lv_obj_set_hidden(obj, !lv_obj_get_hidden(obj));
-        break;
-
-    case LV_EVENT_KEY:
+        action_menu_page();
+    }
+    else if (event == LV_EVENT_KEY)
+    {
         key_id = (uint32_t *)lv_event_get_data();
         ESP_LOGI("button_cb", "Clicked button - %u", *key_id);
-        break;
+
+        if (*key_id == LV_KEY_UP)
+        {
+            menu_id = ((menu_id - 1) % 4 + 4) % 4;
+        }
+        else if (*key_id == LV_KEY_DOWN)
+        {
+            menu_id = ((menu_id + 1) % 4 + 4) % 4;
+        }
+        set_menu_page();
     }
 }
 
@@ -135,19 +178,30 @@ static void lvgl_gui_init_obj()
     lv_label_set_text(label_ap_pass_group_4_1, " ");
     lv_label_set_text(label_ip_addr_group_4_2, " ");
 
-    group_1 = lv_group_create();
-    group_2 = lv_group_create();
-    group_3 = lv_group_create();
-    group_4 = lv_group_create();
-    group_4_1 = lv_group_create();
-    group_4_2 = lv_group_create();
+    lv_obj_set_hidden(label_battery_group_root, false);
+    lv_obj_set_hidden(label_alias_group_1, false);
+    lv_obj_set_hidden(label_code_group_1, false);
+    lv_obj_set_hidden(label_time_group_2, true);
+    lv_obj_set_hidden(label_sync_time_group_3, true);
+    lv_obj_set_hidden(label_ap_name_group_4_1, true);
+    lv_obj_set_hidden(label_ap_pass_group_4_1, true);
+    lv_obj_set_hidden(label_ip_addr_group_4_2, true);
+
+    group_root = lv_group_create();
+
+    lv_group_add_obj(group_root, label_alias_group_1);
+    lv_group_add_obj(group_root, label_code_group_1);
+    lv_group_add_obj(group_root, label_time_group_2);
+    lv_group_add_obj(group_root, label_sync_time_group_3);
+    lv_group_add_obj(group_root, label_ap_name_group_4_1);
+    lv_group_add_obj(group_root, label_ap_pass_group_4_1);
+    lv_group_add_obj(group_root, label_ip_addr_group_4_2);
 
     lv_obj_set_event_cb(label_alias_group_1, switch_event_handler_cb);
     lv_obj_set_event_cb(label_code_group_1, switch_event_handler_cb);
-    lv_group_add_obj(group_1, label_alias_group_1);
-    lv_group_add_obj(group_1, label_code_group_1);
+    lv_obj_set_event_cb(label_time_group_2, switch_event_handler_cb);
 
-    lv_indev_set_group(my_indev, group_1);
+    lv_indev_set_group(my_indev, group_root);
     lv_group_focus_obj(label_alias_group_1);
 }
 
@@ -176,11 +230,13 @@ void lvgl_gui_task()
         totp_generate(key, ((unsigned)time(NULL)) / 30, 6, res);
         totp_free();
 
-        lv_label_set_text(label_alias_group_1, time_);
+        lv_label_set_text(label_alias_group_1, "Google");
         lv_label_set_text(label_code_group_1, res);
+        lv_label_set_text(label_time_group_2, time_);
 
         lv_obj_align(label_alias_group_1, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
         lv_obj_align(label_code_group_1, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
+        lv_obj_align(label_time_group_2, NULL, LV_ALIGN_CENTER, 0, 0);
 
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
