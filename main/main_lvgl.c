@@ -44,8 +44,8 @@ void app_main()
     config_adc1();
     characterize_adc1();
 
-    xTaskCreatePinnedToCore(wifi_ntp_task, "ntp", 4096 * 2, NULL, 0, NULL, 0);
-    xTaskCreatePinnedToCore(lvgl_gui_task, "gui", 4096 * 2, NULL, 0, NULL, 1);
+    xTaskCreatePinnedToCore(wifi_ntp_task, "ntp", 4096, NULL, 0, NULL, 0);
+    xTaskCreatePinnedToCore(lvgl_gui_task, "gui", 4096, NULL, 0, NULL, 1);
     // lvgl_gui_task();
 }
 
@@ -55,7 +55,7 @@ static void wifi_ntp_task(void *arg)
     {
         while (1)
         {
-            ESP_ERROR_CHECK_WITHOUT_ABORT(start_wifi_station("{\"c\":1,\"s\":[\"D-\"],\"p\":[\"v\"]}"));
+            ESP_ERROR_CHECK_WITHOUT_ABORT(start_wifi_station("{\"c\":1,\"s\":[\"asdad\"],\"p\":[\"vsdad\"]}"));
             ntp_get_time();
             stop_wifi_station();
 

@@ -18,10 +18,27 @@ lv_indev_t *my_indev = NULL;
 
 static int menu_id = 0;
 
+void action_connect_to_wifi()
+{    
+    while(start_wifi_station("{\"c\":1,\"s\":[\"D-Ladasd\"],\"p\":[\"sad\"]}") == WIFI_ERR_ALREADY_RUNNING);
+    ntp_get_time();
+    stop_wifi_station();
+
+    vTaskDelete(NULL);
+}
+
 static void action_menu_page()
 {
-    lv_label_set_text(label_sync_time_group_3, LV_SYMBOL_LOOP);
+    switch(menu_id)
+    {
+        case 2:
+            lv_label_set_text(label_sync_time_group_3, LV_SYMBOL_LOOP);
+            lv_obj_align(label_sync_time_group_3, NULL, LV_ALIGN_CENTER, 0, 0);
+            xTaskCreatePinnedToCore(action_connect_to_wifi, "ntp", 4096, NULL, 0, NULL, 0);
+            break;
+    }
 }
+
 static void set_menu_page()
 {
     lv_obj_set_hidden(label_alias_group_1, true);
@@ -56,6 +73,7 @@ static void set_menu_page()
         break;
     }
 }
+
 static void lv_tick_task(void *arg)
 {
     lv_task_handler();
@@ -200,7 +218,7 @@ static void lvgl_gui_init_obj()
     lv_obj_set_event_cb(label_alias_group_1, switch_event_handler_cb);
     lv_obj_set_event_cb(label_code_group_1, switch_event_handler_cb);
     lv_obj_set_event_cb(label_time_group_2, switch_event_handler_cb);
-
+    
     lv_indev_set_group(my_indev, group_root);
     lv_group_focus_obj(label_alias_group_1);
 }
