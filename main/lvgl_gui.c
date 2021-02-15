@@ -2,6 +2,7 @@
 
 static lv_group_t *group_root = NULL;
 
+static lv_obj_t *dummy_obj_event_handler = NULL;
 static lv_obj_t *label_battery_group_root = NULL;
 static lv_obj_t *label_alias_group_1 = NULL;
 static lv_obj_t *label_code_group_1 = NULL;
@@ -12,15 +13,20 @@ static lv_obj_t *label_ap_pass_group_4_1 = NULL;
 // static lv_img_dsc_t *image_qr_code_group_4_2 = NULL;
 static lv_obj_t *label_ip_addr_group_4_2 = NULL;
 
-static lv_obj_t *scr = NULL;
+static lv_obj_t *scr1 = NULL;
+static lv_obj_t *scr2 = NULL;
+static lv_obj_t *scr3 = NULL;
+static lv_obj_t *scr4 = NULL;
 
 lv_indev_t *my_indev = NULL;
 
 static int menu_id = 0;
+// true means move up and false means move down
+static bool move_direction = false;
 
 void action_connect_to_wifi()
 {    
-    while(start_wifi_station("{\"c\":1,\"s\":[\"D-Ladasd\"],\"p\":[\"sad\"]}") == WIFI_ERR_ALREADY_RUNNING);
+    while(start_wifi_station("{\"c\":1,\"s\":[\"Dsfsdf\"],\"p\":[\"dsfsdfsdf\"]}") == WIFI_ERR_ALREADY_RUNNING);
     ntp_get_time();
     stop_wifi_station();
 
@@ -41,36 +47,27 @@ static void action_menu_page()
 
 static void set_menu_page()
 {
-    lv_obj_set_hidden(label_alias_group_1, true);
-    lv_obj_set_hidden(label_code_group_1, true);
-    lv_obj_set_hidden(label_time_group_2, true);
-    lv_obj_set_hidden(label_sync_time_group_3, true);
-    lv_obj_set_hidden(label_ap_name_group_4_1, true);
-    lv_obj_set_hidden(label_ap_pass_group_4_1, true);
-    lv_obj_set_hidden(label_ip_addr_group_4_2, true);
+    lv_scr_load_anim_t anim_direction = move_direction ? LV_SCR_LOAD_ANIM_OVER_TOP : LV_SCR_LOAD_ANIM_OVER_BOTTOM;
 
     switch (menu_id)
     {
-    case 0:
-        lv_obj_set_hidden(label_alias_group_1, false);
-        lv_obj_set_hidden(label_code_group_1, false);
-        break;
+        case 0:
+            lv_scr_load_anim(scr1, anim_direction, 100, 100, false);
+            break;
 
-    case 1:
-        lv_obj_set_hidden(label_time_group_2, false);
-        break;
+        case 1:
+            lv_scr_load_anim(scr2, anim_direction, 100, 100, false);
+            break;
 
-    case 2:
-        lv_obj_set_hidden(label_sync_time_group_3, false);
-        lv_label_set_text(label_sync_time_group_3, LV_SYMBOL_LOOP "\nSYNC TIME");
-        lv_obj_align(label_sync_time_group_3, NULL, LV_ALIGN_CENTER, 0, 0);
-        break;
+        case 2:
+            lv_scr_load_anim(scr3, anim_direction, 100, 100, false);
+            lv_label_set_text(label_sync_time_group_3, LV_SYMBOL_LOOP "\nSYNC TIME");
+            lv_obj_align(label_sync_time_group_3, NULL, LV_ALIGN_CENTER, 0, 0);
+            break;
 
-    case 3:
-        lv_obj_set_hidden(label_ap_name_group_4_1, false);
-        lv_obj_set_hidden(label_ap_pass_group_4_1, false);
-        lv_obj_set_hidden(label_ip_addr_group_4_2, false);
-        break;
+        case 3:
+            lv_scr_load_anim(scr4, anim_direction, 100, 100, false);
+            break;
     }
 }
 
@@ -131,10 +128,12 @@ static void switch_event_handler_cb(lv_obj_t *obj, lv_event_t event)
         if (*key_id == LV_KEY_UP)
         {
             menu_id = ((menu_id - 1) % 4 + 4) % 4;
+            move_direction = true;
         }
         else if (*key_id == LV_KEY_DOWN)
         {
             menu_id = ((menu_id + 1) % 4 + 4) % 4;
+            move_direction = false;
         }
         set_menu_page();
     }
@@ -176,16 +175,21 @@ static void lvgl_gui_init_drivers()
 
 static void lvgl_gui_init_obj()
 {
-    scr = lv_disp_get_scr_act(NULL);
+    // lv_obj_t *scr = lv_obj_create(NULL, NULL);
+    scr1 = lv_obj_create(NULL, NULL);
+    scr2 = lv_obj_create(NULL, NULL);
+    scr3 = lv_obj_create(NULL, NULL);
+    scr4 = lv_obj_create(NULL, NULL);
 
-    label_battery_group_root = lv_label_create(scr, NULL);
-    label_alias_group_1 = lv_label_create(scr, NULL);
-    label_code_group_1 = lv_label_create(scr, NULL);
-    label_time_group_2 = lv_label_create(scr, NULL);
-    label_sync_time_group_3 = lv_label_create(scr, NULL);
-    label_ap_name_group_4_1 = lv_label_create(scr, NULL);
-    label_ap_pass_group_4_1 = lv_label_create(scr, NULL);
-    label_ip_addr_group_4_2 = lv_label_create(scr, NULL);
+    dummy_obj_event_handler = lv_obj_create(NULL, NULL);
+    label_battery_group_root = lv_label_create(scr1, NULL);
+    label_alias_group_1 = lv_label_create(scr1, NULL);
+    label_code_group_1 = lv_label_create(scr1, NULL);
+    label_time_group_2 = lv_label_create(scr2, NULL);
+    label_sync_time_group_3 = lv_label_create(scr3, NULL);
+    label_ap_name_group_4_1 = lv_label_create(scr4, NULL);
+    label_ap_pass_group_4_1 = lv_label_create(scr4, NULL);
+    label_ip_addr_group_4_2 = lv_label_create(scr4, NULL);
 
     lv_label_set_text(label_battery_group_root, " ");
     lv_label_set_text(label_alias_group_1, " ");
@@ -196,17 +200,9 @@ static void lvgl_gui_init_obj()
     lv_label_set_text(label_ap_pass_group_4_1, " ");
     lv_label_set_text(label_ip_addr_group_4_2, " ");
 
-    lv_obj_set_hidden(label_battery_group_root, false);
-    lv_obj_set_hidden(label_alias_group_1, false);
-    lv_obj_set_hidden(label_code_group_1, false);
-    lv_obj_set_hidden(label_time_group_2, true);
-    lv_obj_set_hidden(label_sync_time_group_3, true);
-    lv_obj_set_hidden(label_ap_name_group_4_1, true);
-    lv_obj_set_hidden(label_ap_pass_group_4_1, true);
-    lv_obj_set_hidden(label_ip_addr_group_4_2, true);
-
     group_root = lv_group_create();
 
+    lv_group_add_obj(group_root, dummy_obj_event_handler);
     lv_group_add_obj(group_root, label_alias_group_1);
     lv_group_add_obj(group_root, label_code_group_1);
     lv_group_add_obj(group_root, label_time_group_2);
@@ -214,13 +210,12 @@ static void lvgl_gui_init_obj()
     lv_group_add_obj(group_root, label_ap_name_group_4_1);
     lv_group_add_obj(group_root, label_ap_pass_group_4_1);
     lv_group_add_obj(group_root, label_ip_addr_group_4_2);
-
-    lv_obj_set_event_cb(label_alias_group_1, switch_event_handler_cb);
-    lv_obj_set_event_cb(label_code_group_1, switch_event_handler_cb);
-    lv_obj_set_event_cb(label_time_group_2, switch_event_handler_cb);
     
+    // lv_obj_set_click(dummy_obj_event_handler, true);
+    lv_obj_set_event_cb(dummy_obj_event_handler, switch_event_handler_cb);
+
     lv_indev_set_group(my_indev, group_root);
-    lv_group_focus_obj(label_alias_group_1);
+    lv_scr_load_anim(scr1, LV_SCR_LOAD_ANIM_FADE_ON, 100, 100, false);
 }
 
 void lvgl_gui_task()

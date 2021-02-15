@@ -55,7 +55,7 @@ static void wifi_ntp_task(void *arg)
     {
         while (1)
         {
-            ESP_ERROR_CHECK_WITHOUT_ABORT(start_wifi_station("{\"c\":1,\"s\":[\"asdad\"],\"p\":[\"vsdad\"]}"));
+            ESP_ERROR_CHECK_WITHOUT_ABORT(start_wifi_station("{\"c\":1,\"s\":[\"sdfsdfdsf\"],\"p\":[\"sdfdsfs\"]}"));
             ntp_get_time();
             stop_wifi_station();
 
