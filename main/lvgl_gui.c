@@ -79,7 +79,7 @@ static void lv_tick_task(void *arg)
     lv_tick_inc(LV_TICK_PERIOD_MS);
 }
 
-static void lv_time_update_task(void *arg)
+static void lv_time_update_task(lv_task_t *task)
 {
     char time[50];
     struct tm time_now;
@@ -91,7 +91,7 @@ static void lv_time_update_task(void *arg)
     lv_obj_align(label_time_group_2, NULL, LV_ALIGN_CENTER, 0, 0);
 }
 
-static void lv_key_update_task(void *arg)
+static void lv_key_update_task(lv_task_t *task)
 {
     char *key = "JBSWY3DPEHPK3PXP";
     char result[10];
@@ -173,11 +173,10 @@ static void lvgl_gui_init_drivers()
 {
     lv_init();
     lvgl_driver_init();
-
     static lv_color_t buf1[DISP_BUF_SIZE];
     static lv_color_t *buf2 = NULL;
     static lv_disp_buf_t disp_buf;
-    uint32_t size_in_px = DISP_BUF_SIZE;
+    uint32_t size_in_px = DISP_BUF_SIZE*8;
     
     lv_disp_buf_init(&disp_buf, buf1, buf2, size_in_px);
 
