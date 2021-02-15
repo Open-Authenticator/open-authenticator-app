@@ -26,7 +26,10 @@ static bool move_direction = false;
 
 void action_connect_to_wifi()
 {    
-    while(start_wifi_station("{\"c\":1,\"s\":[\"Dsfsdf\"],\"p\":[\"dsfsdfsdf\"]}") == WIFI_ERR_ALREADY_RUNNING);
+    while(start_wifi_station("{\"c\":1,\"s\":[\"Dsfsdf\"],\"p\":[\"dsfsdfsdf\"]}") == WIFI_ERR_ALREADY_RUNNING)
+    {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
     ntp_get_time();
     stop_wifi_station();
 
@@ -61,7 +64,7 @@ static void set_menu_page()
 
         case 2:
             lv_scr_load_anim(scr3, anim_direction, 100, 100, false);
-            lv_label_set_text(label_sync_time_group_3, LV_SYMBOL_LOOP "\nSYNC TIME");
+            lv_label_set_text(label_sync_time_group_3, "\t\t\t\t" LV_SYMBOL_LOOP "\nSYNC TIME");
             lv_obj_align(label_sync_time_group_3, NULL, LV_ALIGN_CENTER, 0, 0);
             break;
 
@@ -73,8 +76,35 @@ static void set_menu_page()
 
 static void lv_tick_task(void *arg)
 {
-    lv_task_handler();
     lv_tick_inc(LV_TICK_PERIOD_MS);
+}
+
+static void lv_time_update_task(void *arg)
+{
+    char time[50];
+    struct tm time_now;
+    time_t temp = rtc_ext_get_time();
+    time_now = *localtime(&temp);
+
+    snprintf(time, 50, "%02d:%02d:%02d", time_now.tm_hour, time_now.tm_min, time_now.tm_sec);
+    lv_label_set_text(label_time_group_2, time);
+    lv_obj_align(label_time_group_2, NULL, LV_ALIGN_CENTER, 0, 0);
+}
+
+static void lv_key_update_task(void *arg)
+{
+    char *key = "JBSWY3DPEHPK3PXP";
+    char result[10];
+
+    totp_init(MBEDTLS_MD_SHA1);
+    totp_generate(key, ((unsigned)time(NULL)) / 30, 6, result);
+    totp_free();
+
+    lv_label_set_text(label_alias_group_1, "Google");
+    lv_label_set_text(label_code_group_1, result);
+
+    lv_obj_align(label_alias_group_1, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
+    lv_obj_align(label_code_group_1, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
 }
 
 int read_switch_id()
@@ -148,7 +178,7 @@ static void lvgl_gui_init_drivers()
     static lv_color_t *buf2 = NULL;
     static lv_disp_buf_t disp_buf;
     uint32_t size_in_px = DISP_BUF_SIZE;
-
+    
     lv_disp_buf_init(&disp_buf, buf1, buf2, size_in_px);
 
     lv_disp_drv_t disp_drv;
@@ -161,7 +191,8 @@ static void lvgl_gui_init_drivers()
 
     const esp_timer_create_args_t periodic_timer_args = {
         .callback = &lv_tick_task,
-        .name = "periodic_gui"};
+        .name = "periodic_gui"
+    };
     esp_timer_handle_t periodic_timer;
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, LV_TICK_PERIOD_MS * 1000));
@@ -175,7 +206,6 @@ static void lvgl_gui_init_drivers()
 
 static void lvgl_gui_init_obj()
 {
-    // lv_obj_t *scr = lv_obj_create(NULL, NULL);
     scr1 = lv_obj_create(NULL, NULL);
     scr2 = lv_obj_create(NULL, NULL);
     scr3 = lv_obj_create(NULL, NULL);
@@ -211,7 +241,6 @@ static void lvgl_gui_init_obj()
     lv_group_add_obj(group_root, label_ap_pass_group_4_1);
     lv_group_add_obj(group_root, label_ip_addr_group_4_2);
     
-    // lv_obj_set_click(dummy_obj_event_handler, true);
     lv_obj_set_event_cb(dummy_obj_event_handler, switch_event_handler_cb);
 
     lv_indev_set_group(my_indev, group_root);
@@ -220,11 +249,7 @@ static void lvgl_gui_init_obj()
 
 void lvgl_gui_task()
 {
-    struct tm time_now;
     rtc_ext_init(RTC_SDA, RTC_SCL);
-
-    char *key = "JBSWY3DPEHPK3PXP";
-    char res[10];
 
     struct timeval tm = {.tv_sec = rtc_ext_get_time()};
     settimeofday(&tm, NULL);
@@ -232,26 +257,15 @@ void lvgl_gui_task()
     lvgl_gui_init_drivers();
     lvgl_gui_init_obj();
 
+    lv_task_t *task_time_update = lv_task_create(lv_time_update_task, 500, LV_TASK_PRIO_HIGHEST, NULL);
+    lv_task_t *task_key_update_task = lv_task_create(lv_key_update_task, 10000, LV_TASK_PRIO_HIGHEST, NULL);
+    lv_task_ready(task_time_update);
+    lv_task_ready(task_key_update_task);
+
     while (1)
     {
-        char time_[50];
-        time_t temp = rtc_ext_get_time();
-        time_now = *localtime(&temp);
-
-        snprintf(time_, 50, "%02d:%02d:%02d", time_now.tm_hour, time_now.tm_min, time_now.tm_sec);
-        totp_init(MBEDTLS_MD_SHA1);
-        totp_generate(key, ((unsigned)time(NULL)) / 30, 6, res);
-        totp_free();
-
-        lv_label_set_text(label_alias_group_1, "Google");
-        lv_label_set_text(label_code_group_1, res);
-        lv_label_set_text(label_time_group_2, time_);
-
-        lv_obj_align(label_alias_group_1, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
-        lv_obj_align(label_code_group_1, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
-        lv_obj_align(label_time_group_2, NULL, LV_ALIGN_CENTER, 0, 0);
-
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+        lv_task_handler();
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 
     vTaskDelete(NULL);
