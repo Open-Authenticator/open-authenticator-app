@@ -19,6 +19,6 @@ enum
 
 esp_err_t start_gui_event_handler();
 esp_err_t stop_gui_event_handler();
-esp_err_t post_gui_events(int32_t event_id, void *event_data, size_t event_data_size);
+esp_err_t post_gui_events(int32_t event_id, void *event_data);
 
 #endif

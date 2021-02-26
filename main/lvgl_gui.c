@@ -24,18 +24,6 @@ static int menu_id = 0;
 // true means move up and false means move down
 static bool move_direction = false;
 
-void action_connect_to_wifi()
-{    
-    while(start_wifi_station("{\"c\":1,\"s\":[\"Dsfsdf\"],\"p\":[\"dsfsdfsdf\"]}") == WIFI_ERR_ALREADY_RUNNING)
-    {
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
-    ntp_get_time();
-    stop_wifi_station();
-
-    vTaskDelete(NULL);
-}
-
 static void action_menu_page()
 {
     switch(menu_id)
@@ -43,7 +31,7 @@ static void action_menu_page()
         case 2:
             lv_label_set_text(label_sync_time_group_3, LV_SYMBOL_LOOP);
             lv_obj_align(label_sync_time_group_3, NULL, LV_ALIGN_CENTER, 0, 0);
-            xTaskCreatePinnedToCore(action_connect_to_wifi, "ntp", 4096, NULL, 0, NULL, 0);
+            ESP_LOGI("gui", "%d", post_gui_events(START_SYNC_TIME, NULL));
             break;
     }
 }

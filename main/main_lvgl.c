@@ -10,6 +10,7 @@
 #include "totp.h"
 #include "lvgl_gui.h"
 #include "wifi_handler_station.h"
+#include "gui_event_handler.h"
 
 #include "oa_power.h"
 #include "oa_pin_defs.h"
@@ -44,9 +45,9 @@ void app_main()
     config_adc1();
     characterize_adc1();
 
+    start_gui_event_handler();
     xTaskCreatePinnedToCore(wifi_ntp_task, "ntp", 4096, NULL, 0, NULL, 0);
     xTaskCreatePinnedToCore(lvgl_gui_task, "gui", 4096, NULL, 0, NULL, 1);
-    // lvgl_gui_task();
 }
 
 static void wifi_ntp_task(void *arg)
@@ -55,10 +56,7 @@ static void wifi_ntp_task(void *arg)
     {
         while (1)
         {
-            ESP_ERROR_CHECK_WITHOUT_ABORT(start_wifi_station("{\"c\":1,\"s\":[\"sdfsdfdsf\"],\"p\":[\"sdfdsfs\"]}"));
-            ntp_get_time();
-            stop_wifi_station();
-
+            post_gui_events(START_SYNC_TIME, NULL);
             vTaskDelay(864000 / portTICK_PERIOD_MS);
         }
         vTaskDelay(3600 / portTICK_PERIOD_MS);

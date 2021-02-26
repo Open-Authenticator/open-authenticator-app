@@ -12,6 +12,7 @@
 #include "rtc.h"
 #include "sync.h"
 #include "wifi_handler_station.h"
+#include "gui_event_handler.h"
 
 #include "oa_power.h"
 #include "oa_pin_defs.h"
