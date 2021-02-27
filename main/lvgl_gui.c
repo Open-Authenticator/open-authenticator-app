@@ -31,7 +31,14 @@ static void action_menu_page()
         case 2:
             lv_label_set_text(label_sync_time_group_3, LV_SYMBOL_LOOP);
             lv_obj_align(label_sync_time_group_3, NULL, LV_ALIGN_CENTER, 0, 0);
-            ESP_LOGI("gui", "%d", post_gui_events(START_SYNC_TIME, NULL));
+            ESP_LOGI("gui", "%d", post_gui_events(START_SYNC_TIME, NULL, sizeof(NULL)));
+            break;
+
+        case 3:
+            lv_label_set_text(label_ap_name_group_4_1, "OK running");
+            char *passkey = "pass123456";
+            ESP_LOGI("gui", "%d", post_gui_events(START_ACCESS_POINT, (void*)passkey, (strlen(passkey)+1)*sizeof(passkey)));
+            ESP_LOGI("gui", "%d", post_gui_events(START_CONFIG_SERVER, NULL, sizeof(NULL)));
             break;
     }
 }
@@ -58,13 +65,10 @@ static void set_menu_page()
 
         case 3:
             lv_scr_load_anim(scr4, anim_direction, 100, 100, false);
+            lv_label_set_text(label_ap_name_group_4_1, "connect to ap");
+            lv_obj_align(label_ap_name_group_4_1, NULL, LV_ALIGN_CENTER, 0, 0);
             break;
     }
-}
-
-static void lv_tick_task(void *arg)
-{
-    lv_tick_inc(LV_TICK_PERIOD_MS);
 }
 
 static void lv_time_update_task(lv_task_t *task)
@@ -155,6 +159,11 @@ static void switch_event_handler_cb(lv_obj_t *obj, lv_event_t event)
         }
         set_menu_page();
     }
+}
+
+static void lv_tick_task(void *arg)
+{
+    lv_tick_inc(LV_TICK_PERIOD_MS);
 }
 
 static void lvgl_gui_init_drivers()

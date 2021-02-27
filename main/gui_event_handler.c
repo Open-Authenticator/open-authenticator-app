@@ -8,7 +8,7 @@ static const char *TAG = "gui_event_handler";
 
 static void action_connect_to_wifi()
 {    
-    while(start_wifi_station("{\"c\":1,\"s\":[\"P\"],\"p\":[\"v\"]}") == WIFI_ERR_ALREADY_RUNNING)
+    while(start_wifi_station("{\"c\":1,\"s\":[\"Paranjape-WiFi-extended\"],\"p\":[\"vdp30022\"]}") == WIFI_ERR_ALREADY_RUNNING)
     {
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
@@ -26,10 +26,24 @@ static void gui_event_handler(void *handler_args, esp_event_base_t base, int32_t
         action_connect_to_wifi();
         ESP_LOGI(TAG, "wifi event finished succesfully");
     }
-    // else if (id == START_ACCESS_POINT)
-    // else if (id == STOP_ACCESS_POINT)
-    // else if (id == START_CONFIG_SERVER)
-    // else if (id == STOP_CONFIG_SERVER)
+    else if (id == START_ACCESS_POINT)
+    {
+        char *pass = (char*) event_data;
+        ESP_LOGI(TAG, "pass: %s, size: %d", pass, (int)sizeof(pass));
+        start_wifi_access_point("open-authenticator", pass);
+    }
+    else if (id == STOP_ACCESS_POINT)
+    {
+        stop_wifi_access_point();
+    }
+    else if (id == START_CONFIG_SERVER)
+    {
+        start_config_http_server();
+    }
+    else if (id == STOP_CONFIG_SERVER)
+    {
+        stop_config_http_server();
+    }
 }
 
 esp_err_t start_gui_event_handler()
@@ -49,7 +63,7 @@ esp_err_t start_gui_event_handler()
 
 esp_err_t stop_gui_event_handler();
 
-esp_err_t post_gui_events(int32_t event_id, void *event_data)
+esp_err_t post_gui_events(int32_t event_id, void *event_data, size_t event_data_size)
 {
-    return esp_event_post_to(gui_event_handle, OPEN_AUTHENTICATOR_EVENTS, event_id, event_data, sizeof(event_data), portMAX_DELAY);
+    return esp_event_post_to(gui_event_handle, OPEN_AUTHENTICATOR_EVENTS, event_id, event_data, event_data_size, portMAX_DELAY);
 }
