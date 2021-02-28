@@ -7,19 +7,24 @@ static esp_event_loop_handle_t gui_event_handle = NULL;
 static const char *TAG = "gui_event_handler";
 
 static void action_connect_to_wifi()
-{    
-    while(start_wifi_station("{\"c\":1,\"s\":[\"Paranjape-WiFi-extended\"],\"p\":[\"vdp30022\"]}") == WIFI_ERR_ALREADY_RUNNING)
+{   
+    char *wifi_creds = read_wifi_creds();
+    if (wifi_creds == NULL)
+    {
+        return;
+    }
+
+    while(start_wifi_station(wifi_creds) == WIFI_ERR_ALREADY_RUNNING)
     {
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
     ntp_get_time();
     stop_wifi_station();
+    free(wifi_creds);
 }
 
 static void gui_event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data)
 {
-    // int iteration = *((int*) event_data);
-
     if (id == START_SYNC_TIME)
     {
         ESP_LOGI(TAG, "wifi event started succesfully");
@@ -28,9 +33,7 @@ static void gui_event_handler(void *handler_args, esp_event_base_t base, int32_t
     }
     else if (id == START_ACCESS_POINT)
     {
-        char *pass = (char*) event_data;
-        ESP_LOGI(TAG, "pass: %s, size: %d", pass, (int)sizeof(pass));
-        start_wifi_access_point("open-authenticator", pass);
+        start_wifi_access_point("open-authenticator", (char*)event_data);
     }
     else if (id == STOP_ACCESS_POINT)
     {

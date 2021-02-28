@@ -45,6 +45,15 @@ void app_main()
     config_adc1();
     characterize_adc1();
 
+    ESP_ERROR_CHECK(init_spiffs());
+    // ESP_LOGI("main", "%s", read_wifi_ap_from_spiffs());
+    // ESP_LOGI("main", "%s", read_wifi_creds());
+    // ESP_LOGI("main", "%d", remove_wifi_ap_from_spiffs("D-Link"));
+    // ESP_LOGI("main", "%s", read_wifi_ap_from_spiffs());
+    // ESP_LOGI("main", "%s", read_wifi_creds());
+    // ESP_LOGI("main", "%d", write_wifi_ap_pass_to_spiffs("D-Link", "passkey123"));
+    // ESP_LOGI("main", "%s", read_wifi_ap_from_spiffs());
+    // ESP_LOGI("main", "%s", read_wifi_creds());
     start_gui_event_handler();
     xTaskCreatePinnedToCore(wifi_ntp_task, "ntp", 4096, NULL, 0, NULL, 0);
     xTaskCreatePinnedToCore(lvgl_gui_task, "gui", 4096, NULL, 0, NULL, 1);

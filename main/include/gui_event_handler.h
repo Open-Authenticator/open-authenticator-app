@@ -6,6 +6,7 @@
 #include "wifi_handler_station.h"
 #include "ntp.h"
 #include "config_http_server.h"
+#include "spiffs_handler.h"
 
 ESP_EVENT_DECLARE_BASE(OPEN_AUTHENTICATOR_EVENTS);
 

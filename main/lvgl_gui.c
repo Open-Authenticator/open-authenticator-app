@@ -37,8 +37,8 @@ static void action_menu_page()
         case 3:
             lv_label_set_text(label_ap_name_group_4_1, "OK running");
             char *passkey = "pass123456";
-            ESP_LOGI("gui", "%d", post_gui_events(START_ACCESS_POINT, (void*)passkey, (strlen(passkey)+1)*sizeof(passkey)));
-            ESP_LOGI("gui", "%d", post_gui_events(START_CONFIG_SERVER, NULL, sizeof(NULL)));
+            post_gui_events(START_ACCESS_POINT, (void*)passkey, (strlen(passkey)+1)*sizeof(passkey));
+            post_gui_events(START_CONFIG_SERVER, NULL, sizeof(NULL));
             break;
     }
 }

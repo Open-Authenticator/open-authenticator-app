@@ -9,4 +9,4 @@ register_component()
 
 target_compile_definitions(${COMPONENT_LIB} PUBLIC "-DLV_LVGL_H_INCLUDE_SIMPLE")
 
-spiffs_create_partition_image(oa_store "${CMAKE_CURRENT_SOURCE_DIR}/../frontend" FLASH_IN_PROJECT)
+spiffs_create_partition_image(oa_store "${CMAKE_CURRENT_SOURCE_DIR}/../oa_store" FLASH_IN_PROJECT)
