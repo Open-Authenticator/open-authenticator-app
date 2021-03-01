@@ -127,6 +127,7 @@ esp_err_t remove_wifi_ap_from_spiffs(char *ssid)
             cJSON_Delete(root);
             free(wifi_ap_json);
             fclose(fd);
+            free(output);
             return ESP_OK;
         }
         else
@@ -201,7 +202,7 @@ esp_err_t write_wifi_ap_pass_to_spiffs(char *ssid, char *passkey)
     }
 
     char filepath[30] = WIFI_CRED_PATH;
-    FILE *fd = fopen(filepath, "rw+");
+    FILE *fd = fopen(filepath, "r");
     if (fd == NULL)
     {
         ESP_LOGE(TAG, "Failed to open file : %s", filepath);
@@ -226,13 +227,6 @@ esp_err_t write_wifi_ap_pass_to_spiffs(char *ssid, char *passkey)
         cJSON *root = cJSON_Parse(wifi_ap_json);
         if (root == NULL)
         {
-            free(wifi_ap_json);
-            return ESP_FAIL;
-        }
-
-        if (cJSON_HasObjectItem(root, "c") && cJSON_GetObjectItem(root, "c")->valueint <= 0)
-        {
-            cJSON_Delete(root);
             free(wifi_ap_json);
             return ESP_FAIL;
         }
@@ -279,6 +273,7 @@ esp_err_t write_wifi_ap_pass_to_spiffs(char *ssid, char *passkey)
             cJSON_Delete(root);
             free(wifi_ap_json);
             fclose(fd);
+            free(output);
             return ESP_OK;
         }
         else
@@ -292,9 +287,248 @@ esp_err_t write_wifi_ap_pass_to_spiffs(char *ssid, char *passkey)
     free(wifi_ap_json);
     return ESP_FAIL;
 }
-esp_err_t remove_totp_alias_from_spiffs(char *alias);
-char *read_totp_alias_from_spiffs();
-esp_err_t write_totp_alias_key_to_spiffs(char *alias, char *key);
+
+esp_err_t remove_totp_alias_from_spiffs(char *alias)
+{
+    if (alias == NULL)
+    {
+        return ESP_FAIL;
+    }
+
+    char filepath[30] = TOTP_KEY_PATH;
+    FILE *fd = fopen(filepath, "rw+");
+    if (fd == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to open file : %s", filepath);
+
+        return ESP_FAIL;
+    }
+
+    char *totp_alias_json = calloc(MAX_TOTP_CRED_FILE_SIZE, sizeof(char));
+
+    size_t read_bytes = fread(totp_alias_json, sizeof(char), MAX_TOTP_CRED_FILE_SIZE, fd);
+    fclose(fd);
+
+    if (read_bytes == 0)
+    {
+        ESP_LOGE(TAG, "Failed to read file : %s", filepath);
+
+        free(totp_alias_json);
+        return ESP_FAIL;
+    }
+    else if (read_bytes > 0 && verify_totp_json(totp_alias_json))
+    {
+        cJSON *root = cJSON_Parse(totp_alias_json);
+        if (root == NULL)
+        {
+            free(totp_alias_json);
+            return ESP_FAIL;
+        }
+
+        if (cJSON_HasObjectItem(root, "c") && cJSON_GetObjectItem(root, "c")->valueint <= 0)
+        {
+            cJSON_Delete(root);
+            free(totp_alias_json);
+            return ESP_FAIL;
+        }
+
+        cJSON *alias_array = NULL, *key_array = NULL;
+        if (cJSON_HasObjectItem(root, "a") && cJSON_HasObjectItem(root, "k"))
+        {
+            alias_array = cJSON_GetObjectItem(root, "a");
+            key_array = cJSON_GetObjectItem(root, "k");
+        }
+        else
+        {
+            cJSON_Delete(root);
+            free(totp_alias_json);
+            return ESP_FAIL;
+        }
+
+        int index = -1;
+        for (int i = 0; i < cJSON_GetArraySize(alias_array); i++)
+        {
+            if (!strcmp(cJSON_GetArrayItem(alias_array, i)->valuestring, alias))
+            {
+                index = i;
+                break;
+            }
+        }
+        if (index != -1)
+        {
+            cJSON_DeleteItemFromArray(alias_array, index);
+            cJSON_DeleteItemFromArray(key_array, index);
+            cJSON_SetIntValue(cJSON_GetObjectItem(root, "c"), --cJSON_GetObjectItem(root, "c")->valueint);
+
+            char *output = cJSON_PrintUnformatted(root);
+
+            fd = fopen(filepath, "w+");
+            if (fd == NULL)
+            {
+                ESP_LOGE(TAG, "Failed to open file : %s", filepath);
+
+                return ESP_FAIL;
+            }
+            fwrite(output, sizeof(char), strlen(output), fd);
+
+            cJSON_Delete(root);
+            free(totp_alias_json);
+            fclose(fd);
+            free(output);
+            return ESP_OK;
+        }
+        else
+        {
+            cJSON_Delete(root);
+            free(totp_alias_json);
+            return ESP_FAIL;
+        }
+    }
+
+    free(totp_alias_json);
+    return ESP_FAIL;
+}
+
+char *read_totp_alias_from_spiffs()
+{
+    char filepath[30] = TOTP_KEY_PATH;
+    FILE *fd = fopen(filepath, "r");
+    if (fd == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to open file : %s", filepath);
+
+        return NULL;
+    }
+
+    char *totp_alias_json = calloc(MAX_TOTP_CRED_FILE_SIZE, sizeof(char));
+    char *alias_list = NULL;
+
+    size_t read_bytes = fread(totp_alias_json, sizeof(char), MAX_TOTP_CRED_FILE_SIZE, fd);
+    if (read_bytes == 0)
+    {
+        ESP_LOGE(TAG, "Failed to read file : %s", filepath);
+
+        free(totp_alias_json);
+        fclose(fd);
+        return NULL;
+    }
+    else if (read_bytes > 0 && verify_totp_json(totp_alias_json))
+    {
+        cJSON *root = cJSON_Parse(totp_alias_json);
+        if (root == NULL)
+        {
+            free(totp_alias_json);
+            fclose(fd);
+            return NULL;
+        }
+
+        cJSON_DeleteItemFromObject(root, "c");
+        cJSON_DeleteItemFromObject(root, "k");
+
+        alias_list = cJSON_PrintUnformatted(root);
+
+        cJSON_Delete(root);
+    }
+
+    free(totp_alias_json);
+    fclose(fd);
+
+    return alias_list;
+}
+
+esp_err_t write_totp_alias_key_to_spiffs(char *alias, char *key)
+{
+    if (alias == NULL || key == NULL)
+    {
+        return ESP_FAIL;
+    }
+    
+    char filepath[30] = TOTP_KEY_PATH;
+    FILE *fd = fopen(filepath, "r");
+    if (fd == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to open file : %s", filepath);
+
+        return ESP_FAIL;
+    }
+
+    char *totp_alias_json = calloc(MAX_TOTP_CRED_FILE_SIZE, sizeof(char));
+
+    size_t read_bytes = fread(totp_alias_json, sizeof(char), MAX_TOTP_CRED_FILE_SIZE, fd);
+    fclose(fd);
+
+    if (read_bytes == 0)
+    {
+        ESP_LOGE(TAG, "Failed to read file : %s", filepath);
+
+        free(totp_alias_json);
+        return ESP_FAIL;
+    }
+    else if (read_bytes > 0 && verify_totp_json(totp_alias_json))
+    {
+        cJSON *root = cJSON_Parse(totp_alias_json);
+        if (root == NULL)
+        {
+            free(totp_alias_json);
+            return ESP_FAIL;
+        }
+
+        cJSON *alias_array = NULL, *key_array = NULL;
+        if (cJSON_HasObjectItem(root, "a") && cJSON_HasObjectItem(root, "k"))
+        {
+            alias_array = cJSON_GetObjectItem(root, "a");
+            key_array = cJSON_GetObjectItem(root, "k");
+        }
+        else
+        {
+            cJSON_Delete(root);
+            free(totp_alias_json);
+            return ESP_FAIL;
+        }
+
+        int index = -1;
+        for (int i = 0; i < cJSON_GetArraySize(alias_array); i++)
+        {
+            if (!strcmp(cJSON_GetArrayItem(alias_array, i)->valuestring, alias))
+            {
+                index = i;
+                break;
+            }
+        }
+        if (index == -1)
+        {
+            cJSON_AddItemToArray(alias_array, cJSON_CreateString(alias));
+            cJSON_AddItemToArray(key_array, cJSON_CreateString(key));
+            cJSON_SetIntValue(cJSON_GetObjectItem(root, "c"), ++cJSON_GetObjectItem(root, "c")->valueint);
+
+            char *output = cJSON_PrintUnformatted(root);
+
+            fd = fopen(filepath, "w+");
+            if (fd == NULL)
+            {
+                ESP_LOGE(TAG, "Failed to open file : %s", filepath);
+
+                return ESP_FAIL;
+            }
+            fwrite(output, sizeof(char), strlen(output), fd);
+
+            cJSON_Delete(root);
+            free(totp_alias_json);
+            fclose(fd);
+            free(output);
+            return ESP_OK;
+        }
+        else
+        {
+            cJSON_Delete(root);
+            free(totp_alias_json);
+            return ESP_FAIL;
+        }
+    }
+
+    free(totp_alias_json);
+    return ESP_FAIL;
+}
 
 char *read_wifi_creds()
 {
@@ -328,6 +562,7 @@ char *read_wifi_creds()
     fclose(fd);
     return NULL;
 }
+
 totp_key_creds totp_key(int key_id);
 
 bool verify_wifi_json(char *input_json) { return true; }

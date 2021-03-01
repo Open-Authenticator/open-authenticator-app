@@ -20,6 +20,7 @@
 #define WEBSITE_PATH OA_MOUNT_POINT "/www"
 #define FILE_PATH_MAX (ESP_VFS_PATH_MAX + 128)
 #define MAX_WIFI_CRED_FILE_SIZE 1040
+#define MAX_TOTP_CRED_FILE_SIZE 1040
 typedef struct key_creds 
 {
     char* alias;

@@ -135,7 +135,7 @@ static esp_err_t remove_ap_handler(httpd_req_t *req)
     else
     {
         cJSON_Delete(root);
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "unable to add access point to list");
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "unable to remove access point from list");
     }
 
     return ESP_OK;
@@ -233,16 +233,41 @@ static esp_err_t remove_alias_handler(httpd_req_t *req)
     }
     buf[total_len] = '\0';
 
-    ESP_LOGI(TAG, "received message: %s", buf);
-    httpd_resp_sendstr(req, "alias removed from list");
+    cJSON *root = cJSON_Parse(buf);
+    if (root != NULL && cJSON_HasObjectItem(root, "a") && cJSON_IsString(cJSON_GetObjectItem(root, "a")))
+    {
+        if (remove_totp_alias_from_spiffs(cJSON_GetObjectItem(root, "a")->valuestring) == ESP_OK)
+        {
+            httpd_resp_sendstr(req, "removed alias-key from list");
+        }
+        else
+        {
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "unable to remove alias-key from list");
+        }
+    }
+    else
+    {
+        cJSON_Delete(root);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "unable to remove alias-key from list");
+    }
 
     return ESP_OK;
 }
 
 static esp_err_t read_alias_list_handler(httpd_req_t *req)
 {
-    httpd_resp_set_type(req, "text/plain");
-    httpd_resp_sendstr(req, "alias list: it works yaya");
+    char *data = read_totp_alias_from_spiffs();
+    httpd_resp_set_type(req, "application/json");
+    if (data != NULL)
+    {
+        httpd_resp_sendstr(req, data);
+    }
+    else
+    {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to read totp alias values");
+    }
+
+    free(data);
 
     return ESP_OK;
 }
@@ -273,8 +298,24 @@ static esp_err_t write_alias_key_handler(httpd_req_t *req)
     }
     buf[total_len] = '\0';
 
-    ESP_LOGI(TAG, "received message: %s", buf);
-    httpd_resp_sendstr(req, "wrote alias_key to list");
+    cJSON *root = cJSON_Parse(buf);
+    if (root != NULL && cJSON_HasObjectItem(root, "a") && cJSON_IsString(cJSON_GetObjectItem(root, "a")) &&
+        cJSON_HasObjectItem(root, "k") && cJSON_IsString(cJSON_GetObjectItem(root, "k")))
+    {
+        if (write_totp_alias_key_to_spiffs(cJSON_GetObjectItem(root, "a")->valuestring, cJSON_GetObjectItem(root, "k")->valuestring) == ESP_OK)
+        {
+            httpd_resp_sendstr(req, "added alias-key to list");
+        }
+        else
+        {
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "unable to add alias-key to list");
+        }
+    }
+    else
+    {
+        cJSON_Delete(root);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "unable to add alias-key to list");
+    }
 
     return ESP_OK;
 }
