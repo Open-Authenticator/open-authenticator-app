@@ -49,7 +49,7 @@ esp_err_t remove_wifi_ap_from_spiffs(char *ssid)
     }
 
     char filepath[30] = WIFI_CRED_PATH;
-    FILE *fd = fopen(filepath, "rw+");
+    FILE *fd = fopen(filepath, "r");
     if (fd == NULL)
     {
         ESP_LOGE(TAG, "Failed to open file : %s", filepath);
@@ -296,7 +296,7 @@ esp_err_t remove_totp_alias_from_spiffs(char *alias)
     }
 
     char filepath[30] = TOTP_KEY_PATH;
-    FILE *fd = fopen(filepath, "rw+");
+    FILE *fd = fopen(filepath, "r");
     if (fd == NULL)
     {
         ESP_LOGE(TAG, "Failed to open file : %s", filepath);
@@ -442,7 +442,7 @@ esp_err_t write_totp_alias_key_to_spiffs(char *alias, char *key)
     {
         return ESP_FAIL;
     }
-    
+
     char filepath[30] = TOTP_KEY_PATH;
     FILE *fd = fopen(filepath, "r");
     if (fd == NULL)
@@ -563,7 +563,121 @@ char *read_wifi_creds()
     return NULL;
 }
 
-totp_key_creds totp_key(int key_id);
+esp_err_t read_totp_key(int key_id, totp_key_creds *key_creds)
+{
+    if (key_id < 0)
+    {
+        return ESP_FAIL;
+    }
+
+    char filepath[30] = TOTP_KEY_PATH;
+    FILE *fd = fopen(filepath, "r");
+    if (fd == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to open file : %s", filepath);
+
+        return ESP_FAIL;
+    }
+
+    char *totp_alias_json = calloc(MAX_TOTP_CRED_FILE_SIZE, sizeof(char));
+
+    size_t read_bytes = fread(totp_alias_json, sizeof(char), MAX_TOTP_CRED_FILE_SIZE, fd);
+    fclose(fd);
+
+    if (read_bytes == 0)
+    {
+        ESP_LOGE(TAG, "Failed to read file : %s", filepath);
+
+        free(totp_alias_json);
+        return ESP_FAIL;
+    }
+    else if (read_bytes > 0 && verify_totp_json(totp_alias_json))
+    {
+        cJSON *root = cJSON_Parse(totp_alias_json);
+        if (root == NULL)
+        {
+            free(totp_alias_json);
+            return ESP_FAIL;
+        }
+
+        if (cJSON_HasObjectItem(root, "c") && cJSON_GetObjectItem(root, "c")->valueint - 1 < key_id)
+        {
+            cJSON_Delete(root);
+            free(totp_alias_json);
+            return ESP_FAIL;
+        }
+
+        cJSON *alias_array = NULL, *key_array = NULL;
+        if (cJSON_HasObjectItem(root, "a") && cJSON_HasObjectItem(root, "k"))
+        {
+            alias_array = cJSON_GetObjectItem(root, "a");
+            key_array = cJSON_GetObjectItem(root, "k");
+        }
+        else
+        {
+            cJSON_Delete(root);
+            free(totp_alias_json);
+            return ESP_FAIL;
+        }
+
+        strcpy(key_creds->alias, cJSON_GetArrayItem(alias_array, key_id)->valuestring);
+        strcpy(key_creds->key, cJSON_GetArrayItem(key_array, key_id)->valuestring);
+
+        free(totp_alias_json);
+        cJSON_Delete(root);
+        return ESP_OK;
+    }
+
+    free(totp_alias_json);
+    return ESP_FAIL;
+}
+
+int read_totp_key_count()
+{
+    int totp_key_count = -1;
+    char filepath[30] = TOTP_KEY_PATH;
+    FILE *fd = fopen(filepath, "r");
+    if (fd == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to open file : %s", filepath);
+
+        return -1;
+    }
+
+    char *totp_alias_json = calloc(MAX_TOTP_CRED_FILE_SIZE, sizeof(char));
+
+    size_t read_bytes = fread(totp_alias_json, sizeof(char), MAX_TOTP_CRED_FILE_SIZE, fd);
+    fclose(fd);
+
+    if (read_bytes == 0)
+    {
+        ESP_LOGE(TAG, "Failed to read file : %s", filepath);
+
+        free(totp_alias_json);
+        return -1;
+    }
+    else if (read_bytes > 0 && verify_totp_json(totp_alias_json))
+    {
+        cJSON *root = cJSON_Parse(totp_alias_json);
+        if (root == NULL)
+        {
+            free(totp_alias_json);
+            return -1;
+        }
+
+        if (cJSON_HasObjectItem(root, "c"))
+        {
+            totp_key_count = cJSON_GetObjectItem(root, "c")->valueint;
+        }
+
+        free(totp_alias_json);
+        cJSON_Delete(root);
+        return totp_key_count;
+    }
+
+    free(totp_alias_json);
+    return -1;
+}
 
 bool verify_wifi_json(char *input_json) { return true; }
 bool verify_totp_json(char *input_json) { return true; }

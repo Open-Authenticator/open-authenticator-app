@@ -23,8 +23,8 @@
 #define MAX_TOTP_CRED_FILE_SIZE 1040
 typedef struct key_creds 
 {
-    char* alias;
-    char* key;
+    char alias[20];
+    char key[64];
 }totp_key_creds;
 
 esp_err_t init_spiffs();
@@ -34,10 +34,9 @@ esp_err_t write_wifi_ap_pass_to_spiffs(char *ssid, char *passkey);
 esp_err_t remove_totp_alias_from_spiffs(char *alias);
 char* read_totp_alias_from_spiffs();
 esp_err_t write_totp_alias_key_to_spiffs(char *alias, char *key);
-
 char* read_wifi_creds();
-totp_key_creds read_totp_key(int key_id);
-
+esp_err_t read_totp_key(int key_id, totp_key_creds *key_creds);
+int read_totp_key_count();
 bool verify_wifi_json(char* input_json);
 bool verify_totp_json(char* input_json);
 

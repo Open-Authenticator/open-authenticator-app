@@ -7,18 +7,24 @@ static esp_event_loop_handle_t gui_event_handle = NULL;
 static const char *TAG = "gui_event_handler";
 
 static void action_connect_to_wifi()
-{   
+{
     char *wifi_creds = read_wifi_creds();
     if (wifi_creds == NULL)
     {
         return;
     }
 
-    while(start_wifi_station(wifi_creds) == WIFI_ERR_ALREADY_RUNNING)
+    esp_err_t err;
+    do
     {
+        err = start_wifi_station(wifi_creds);
         vTaskDelay(pdMS_TO_TICKS(1000));
+    } while (err == WIFI_ERR_ALREADY_RUNNING);
+    
+    if (err == ESP_OK)
+    {
+        ntp_get_time();
     }
-    ntp_get_time();
     stop_wifi_station();
     free(wifi_creds);
 }
@@ -33,7 +39,7 @@ static void gui_event_handler(void *handler_args, esp_event_base_t base, int32_t
     }
     else if (id == START_ACCESS_POINT)
     {
-        start_wifi_access_point("open-authenticator", (char*)event_data);
+        start_wifi_access_point("open-authenticator", (char *)event_data);
     }
     else if (id == STOP_ACCESS_POINT)
     {
