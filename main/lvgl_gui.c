@@ -329,7 +329,7 @@ void lvgl_gui_task()
     lvgl_gui_init_drivers();
     lvgl_gui_init_obj();
 
-    task_time_update = lv_task_create(lv_time_update_task, 1000, LV_TASK_PRIO_MID, NULL);
+    task_time_update = lv_task_create(lv_time_update_task, 1000, LV_TASK_PRIO_HIGH, NULL);
     task_key_update_task = lv_task_create(lv_key_update_task, 1000, LV_TASK_PRIO_HIGHEST, NULL);
     lv_task_ready(task_time_update);
     lv_task_ready(task_key_update_task);
