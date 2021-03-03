@@ -291,8 +291,13 @@ static void lvgl_gui_init_obj()
     lv_bar_set_type(bar_time_progress_group1, LV_BAR_TYPE_SYMMETRICAL);
     lv_obj_align(bar_time_progress_group1, NULL, LV_ALIGN_CENTER, 0, 0);
 
-    lv_obj_set_size(label_sync_time_spinner_group_3, 50, 50);
+    lv_obj_set_size(label_sync_time_spinner_group_3, 60, 60);
     lv_spinner_set_type(label_sync_time_spinner_group_3, LV_SPINNER_TYPE_FILLSPIN_ARC);
+    lv_spinner_set_arc_length(label_sync_time_spinner_group_3, (lv_anim_value_t)100);
+    lv_obj_set_style_local_line_width(label_sync_time_spinner_group_3, LV_SPINNER_PART_INDIC, LV_STATE_DEFAULT, 5);
+    lv_obj_set_style_local_border_opa(label_sync_time_spinner_group_3, LV_SPINNER_PART_BG, LV_STATE_DEFAULT, 0);
+    lv_obj_set_style_local_border_opa(label_sync_time_spinner_group_3, LV_ARC_PART_BG, LV_STATE_DEFAULT, 0);
+    lv_obj_set_style_local_radius(label_sync_time_spinner_group_3, LV_SPINNER_PART_INDIC, LV_STATE_DEFAULT, 10);
     lv_obj_align(label_sync_time_spinner_group_3, NULL, LV_ALIGN_CENTER, 0, 0);
 
     lv_label_set_long_mode(label_ap_name_group_4_1, LV_LABEL_LONG_SROLL_CIRC);
