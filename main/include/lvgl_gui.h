@@ -21,6 +21,7 @@
 
 #include "lvgl.h"
 #include "lvgl_helpers.h"
+#include "lv_qrcode.h"
 
 #define LV_TICK_PERIOD_MS 1
 

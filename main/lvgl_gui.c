@@ -93,11 +93,11 @@ static void set_menu_page()
         break;
 
     case 2:
-        lv_scr_load_anim(scr3[1], anim_direction, 100, 100, false);
+        lv_scr_load_anim(scr3[scr3_submenu_id], anim_direction, 100, 100, false);
         break;
 
     case 3:
-        lv_scr_load_anim(scr4[scr4_submenu_id], anim_direction, 100, 100, false);
+        lv_scr_load_anim(scr4[2], anim_direction, 100, 100, false);
         break;
     }
 }
@@ -268,7 +268,7 @@ static void lvgl_gui_init_obj()
     label_ap_name_group_4_1 = lv_label_create(scr4[1], NULL);
     label_ap_pass_group_4_1 = lv_label_create(scr4[1], NULL);
     label_ip_addr_group_4_2 = lv_label_create(scr4[2], NULL);
-    image_qr_code_group_4_2 = lv_img_create(scr4[2], NULL);
+    image_qr_code_group_4_2 = lv_qrcode_create(scr4[2], 64, lv_color_hex3(0x000), lv_color_hex3(0xfff));
 
     lv_label_set_text(label_battery_group_root, " ");
     lv_label_set_text(label_alias_group_1, " ");
@@ -278,14 +278,14 @@ static void lvgl_gui_init_obj()
     lv_label_set_text(label_setting_group_4, "\t\t\t\t" LV_SYMBOL_SETTINGS "\nSETTINGS");
     lv_label_set_text(label_ap_name_group_4_1, "connect to open-authenticator " LV_SYMBOL_WIFI);
     lv_label_set_text(label_ap_pass_group_4_1, " ");
-    lv_label_set_text(label_ip_addr_group_4_2, " ");
+    lv_label_set_text(label_ip_addr_group_4_2, "connect to\n192.168.1.1");
 
     lv_obj_align(label_time_group_2, NULL, LV_ALIGN_CENTER, 0, 0);
     lv_obj_align(label_sync_time_group_3, NULL, LV_ALIGN_CENTER, 0, 0);
     lv_obj_align(label_setting_group_4, NULL, LV_ALIGN_CENTER, 0, 0);
     lv_obj_align(label_ap_name_group_4_1, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
     lv_obj_align(label_ap_pass_group_4_1, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
-    // add group_4_2 elements too
+    lv_obj_align(image_qr_code_group_4_2, NULL, LV_ALIGN_IN_LEFT_MID, 0, 0);
 
     lv_obj_set_size(bar_time_progress_group1, 128, 10);
     lv_bar_set_type(bar_time_progress_group1, LV_BAR_TYPE_SYMMETRICAL);
@@ -302,6 +302,13 @@ static void lvgl_gui_init_obj()
 
     lv_label_set_long_mode(label_ap_name_group_4_1, LV_LABEL_LONG_SROLL_CIRC);
     lv_obj_set_width(label_ap_name_group_4_1, 128);
+
+    lv_label_set_long_mode(label_ip_addr_group_4_2, LV_LABEL_LONG_SROLL_CIRC);
+    lv_obj_set_width(label_ip_addr_group_4_2, 60);
+    lv_obj_align(label_ip_addr_group_4_2, NULL, LV_ALIGN_IN_RIGHT_MID, 0, 0);
+
+    const char *data = "http://192.168.1.1";
+    lv_qrcode_update(image_qr_code_group_4_2, data, strlen(data));
 
     group_root = lv_group_create();
 
@@ -324,6 +331,11 @@ static void lvgl_gui_init_obj()
     lv_scr_load_anim(scr1, LV_SCR_LOAD_ANIM_FADE_ON, 100, 100, false);
 }
 
+void heap_r()
+{
+    ESP_LOGI("free heap", "%d kb", esp_get_free_heap_size()/1024);
+}
+
 void lvgl_gui_task()
 {
     rtc_ext_init(RTC_SDA, RTC_SCL);
@@ -336,6 +348,7 @@ void lvgl_gui_task()
 
     task_time_update = lv_task_create(lv_time_update_task, 1000, LV_TASK_PRIO_HIGH, NULL);
     task_key_update_task = lv_task_create(lv_key_update_task, 1000, LV_TASK_PRIO_HIGHEST, NULL);
+    lv_task_t *temp = lv_task_create(heap_r, 3000, LV_TASK_PRIO_HIGH, NULL);
     lv_task_ready(task_time_update);
     lv_task_ready(task_key_update_task);
 

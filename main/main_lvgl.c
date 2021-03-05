@@ -56,7 +56,7 @@ void app_main()
     // ESP_LOGI("main", "%s", read_wifi_creds());
     start_gui_event_handler();
     xTaskCreatePinnedToCore(wifi_ntp_task, "ntp", 4096, NULL, 0, NULL, 0);
-    xTaskCreatePinnedToCore(lvgl_gui_task, "gui", 4096, NULL, 0, NULL, 1);
+    xTaskCreatePinnedToCore(lvgl_gui_task, "gui", 4096*3, NULL, 0, NULL, 1);
 }
 
 static void wifi_ntp_task(void *arg)

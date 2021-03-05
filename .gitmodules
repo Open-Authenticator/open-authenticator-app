@@ -7,3 +7,6 @@
 [submodule "components/wifi-handler-component"]
 	path = components/wifi-handler-component
 	url = https://github.com/Open-Authenticator/wifi-handler-component.git
+[submodule "components/qr-code-generator-component"]
+	path = components/qr-code-generator-component
+	url = https://github.com/Open-Authenticator/qr-code-generator-component.git
