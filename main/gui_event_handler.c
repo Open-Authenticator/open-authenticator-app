@@ -33,30 +33,46 @@ static void gui_event_handler(void *handler_args, esp_event_base_t base, int32_t
 {
     if (id == START_SYNC_TIME)
     {
-        ESP_LOGI(TAG, "wifi event started succesfully");
+        if (*(bool *)event_data)
+        { 
+            xEventGroupSetBits(gui_event_group, S_SYNC_TIME_BIT);
+        }
         action_connect_to_wifi();
-        ESP_LOGI(TAG, "wifi event finished succesfully");
+        if (*(bool *)event_data)
+        {
+            xEventGroupSetBits(gui_event_group, E_SYNC_TIME_BIT);
+        }
     }
     else if (id == START_ACCESS_POINT)
     {
+        xEventGroupSetBits(gui_event_group, S_START_ACCESS_POINT);
         start_wifi_access_point("open-authenticator", (char *)event_data);
+        xEventGroupSetBits(gui_event_group, E_START_ACCESS_POINT);
     }
     else if (id == STOP_ACCESS_POINT)
     {
+        xEventGroupSetBits(gui_event_group, S_STOP_ACCESS_POINT);
         stop_wifi_access_point();
+        xEventGroupSetBits(gui_event_group, E_STOP_ACCESS_POINT);
     }
     else if (id == START_CONFIG_SERVER)
     {
+        xEventGroupSetBits(gui_event_group, S_START_CONFIG_SERVER);
         start_config_http_server();
+        xEventGroupSetBits(gui_event_group, E_START_CONFIG_SERVER);
     }
     else if (id == STOP_CONFIG_SERVER)
     {
+        xEventGroupSetBits(gui_event_group, S_STOP_CONFIG_SERVER);
         stop_config_http_server();
+        xEventGroupSetBits(gui_event_group, E_STOP_CONFIG_SERVER);
     }
 }
 
 esp_err_t start_gui_event_handler()
 {
+    gui_event_group = xEventGroupCreate();
+
     esp_event_loop_args_t gui_event_handle_args = {
         .queue_size = 10,
         .task_name = "gui_event_handler",

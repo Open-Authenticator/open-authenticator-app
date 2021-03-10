@@ -65,7 +65,8 @@ static void wifi_ntp_task(void *arg)
     {
         while (1)
         {
-            post_gui_events(START_SYNC_TIME, NULL, sizeof(NULL));
+            bool sent_from_gui = false;
+            post_gui_events(START_SYNC_TIME, (void* )&sent_from_gui, sizeof(sent_from_gui));
             vTaskDelay(864000 / portTICK_PERIOD_MS);
         }
         vTaskDelay(3600 / portTICK_PERIOD_MS);

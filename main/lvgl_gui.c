@@ -35,6 +35,9 @@ static bool move_direction = false;
 static int scr3_submenu_id = 0;
 static int scr4_submenu_id = 0;
 
+static SemaphoreHandle_t sync_time_task_lock = NULL;
+static void set_menu_page();
+
 // credits to this function: https://codereview.stackexchange.com/a/29200
 static void random_string(char *str, size_t size)
 {
@@ -44,17 +47,49 @@ static void random_string(char *str, size_t size)
         --size;
         for (size_t n = 0; n < size; n++)
         {
-            int key = rand() % (int)(sizeof charset - 1);
+            int key = esp_random() % (int)(sizeof charset - 1);
             str[n] = charset[key];
         }
         str[size] = '\0';
     }
 }
 
+static void lv_sync_time_subscreen_task()
+{
+    if (sync_time_task_lock != NULL)
+    {
+        if (xSemaphoreTake(sync_time_task_lock, (TickType_t)portMAX_DELAY) == pdTRUE)
+        {
+            EventBits_t bits = xEventGroupWaitBits(gui_event_group, S_SYNC_TIME_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
+            if (bits & S_SYNC_TIME_BIT)
+            {
+                scr3_submenu_id = 1;
+                // lv_scr_load_anim(scr3[scr3_submenu_id], LV_SCR_LOAD_ANIM_NONE, 100, 100, false);
+                set_menu_page();
+                xEventGroupClearBits(gui_event_group, S_SYNC_TIME_BIT);
+            }
+
+            bits = xEventGroupWaitBits(gui_event_group, E_SYNC_TIME_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
+            if (bits & E_SYNC_TIME_BIT)
+            {
+                scr3_submenu_id = 0;
+                // lv_scr_load_anim(scr3[scr3_submenu_id], LV_SCR_LOAD_ANIM_NONE, 100, 100, false);
+                set_menu_page();
+                xEventGroupClearBits(gui_event_group, E_SYNC_TIME_BIT);
+            }
+
+            xSemaphoreGive(sync_time_task_lock);
+        }
+    }
+
+    vTaskDelete(NULL);
+}
+
 static void action_menu_page()
 {
     int key_count = 0;
     char passkey[64] = "";
+    bool sent_from_gui = true;
 
     switch (menu_id)
     {
@@ -63,8 +98,10 @@ static void action_menu_page()
         key_id = key_count >= 0 ? ((key_id + 1) % key_count + key_count) % key_count : 0;
         lv_task_ready(task_key_update_task);
         break;
+
     case 2:
-        post_gui_events(START_SYNC_TIME, NULL, sizeof(NULL));
+        post_gui_events(START_SYNC_TIME, (void *)&sent_from_gui, sizeof(sent_from_gui));
+        xTaskCreate(lv_sync_time_subscreen_task, "sync_time_subscreen_task", 2048, NULL, 0, NULL);
         break;
 
     case 3:
@@ -97,7 +134,7 @@ static void set_menu_page()
         break;
 
     case 3:
-        lv_scr_load_anim(scr4[2], anim_direction, 100, 100, false);
+        lv_scr_load_anim(scr4[scr4_submenu_id], anim_direction, 100, 100, false);
         break;
     }
 }
@@ -333,11 +370,13 @@ static void lvgl_gui_init_obj()
 
 void heap_r()
 {
-    ESP_LOGI("free heap", "%d kb", esp_get_free_heap_size()/1024);
+    ESP_LOGI("free heap", "%d kb", esp_get_free_heap_size() / 1024);
 }
 
 void lvgl_gui_task()
 {
+    // vSemaphoreCreateBinary(sync_time_task_lock);
+    sync_time_task_lock = xSemaphoreCreateMutex();
     rtc_ext_init(RTC_SDA, RTC_SCL);
 
     struct timeval tm = {.tv_sec = rtc_ext_get_time()};

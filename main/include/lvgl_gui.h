@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/semphr.h"
+#include "esp_system.h"
 
 #include "ntp.h"
 #include "totp.h"
