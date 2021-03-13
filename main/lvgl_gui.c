@@ -36,7 +36,7 @@ static int scr3_submenu_id = 0;
 static int scr4_submenu_id = 0;
 
 static SemaphoreHandle_t sync_time_task_lock = NULL;
-static void set_menu_page();
+static void set_menu_page(bool use_anim);
 
 // credits to this function: https://codereview.stackexchange.com/a/29200
 static void random_string(char *str, size_t size)
@@ -64,8 +64,7 @@ static void lv_sync_time_subscreen_task()
             if (bits & S_SYNC_TIME_BIT)
             {
                 scr3_submenu_id = 1;
-                // lv_scr_load_anim(scr3[scr3_submenu_id], LV_SCR_LOAD_ANIM_NONE, 100, 100, false);
-                set_menu_page();
+                set_menu_page(false);
                 xEventGroupClearBits(gui_event_group, S_SYNC_TIME_BIT);
             }
 
@@ -73,8 +72,7 @@ static void lv_sync_time_subscreen_task()
             if (bits & E_SYNC_TIME_BIT)
             {
                 scr3_submenu_id = 0;
-                // lv_scr_load_anim(scr3[scr3_submenu_id], LV_SCR_LOAD_ANIM_NONE, 100, 100, false);
-                set_menu_page();
+                set_menu_page(false);
                 xEventGroupClearBits(gui_event_group, E_SYNC_TIME_BIT);
             }
 
@@ -100,8 +98,11 @@ static void action_menu_page()
         break;
 
     case 2:
-        post_gui_events(START_SYNC_TIME, (void *)&sent_from_gui, sizeof(sent_from_gui));
-        xTaskCreate(lv_sync_time_subscreen_task, "sync_time_subscreen_task", 2048, NULL, 0, NULL);
+        if (xSemaphoreGetMutexHolder(sync_time_task_lock) == NULL)
+        {
+            post_gui_events(START_SYNC_TIME, (void *)&sent_from_gui, sizeof(sent_from_gui));
+            xTaskCreate(lv_sync_time_subscreen_task, "sync_time_subscreen_task", 2048, NULL, 0, NULL);
+        }
         break;
 
     case 3:
@@ -115,9 +116,9 @@ static void action_menu_page()
     }
 }
 
-static void set_menu_page()
+static void set_menu_page(bool use_anim)
 {
-    lv_scr_load_anim_t anim_direction = move_direction ? LV_SCR_LOAD_ANIM_OVER_TOP : LV_SCR_LOAD_ANIM_OVER_BOTTOM;
+    lv_scr_load_anim_t anim_direction = use_anim ? (move_direction ? LV_SCR_LOAD_ANIM_OVER_TOP : LV_SCR_LOAD_ANIM_OVER_BOTTOM) : LV_SCR_LOAD_ANIM_NONE;
 
     switch (menu_id)
     {
@@ -241,7 +242,7 @@ static void switch_event_handler_cb(lv_obj_t *obj, lv_event_t event)
             menu_id = ((menu_id + 1) % 4 + 4) % 4;
             move_direction = false;
         }
-        set_menu_page();
+        set_menu_page(true);
     }
 }
 
@@ -375,7 +376,6 @@ void heap_r()
 
 void lvgl_gui_task()
 {
-    // vSemaphoreCreateBinary(sync_time_task_lock);
     sync_time_task_lock = xSemaphoreCreateMutex();
     rtc_ext_init(RTC_SDA, RTC_SCL);
 
