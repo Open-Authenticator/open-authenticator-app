@@ -36,6 +36,8 @@ static int scr3_submenu_id = 0;
 static int scr4_submenu_id = 0;
 
 static SemaphoreHandle_t sync_time_task_lock = NULL;
+static SemaphoreHandle_t config_server_task_lock = NULL;
+
 static void set_menu_page(bool use_anim);
 
 // credits to this function: https://codereview.stackexchange.com/a/29200
@@ -83,6 +85,57 @@ static void lv_sync_time_subscreen_task()
     vTaskDelete(NULL);
 }
 
+static void lv_config_server_subscreen_task()
+{
+    if (config_server_task_lock != NULL)
+    {
+        if (xSemaphoreTake(config_server_task_lock, (TickType_t)portMAX_DELAY) == pdTRUE)
+        {
+            EventBits_t bits = xEventGroupWaitBits(gui_event_group, S_START_ACCESS_POINT, pdFALSE, pdFALSE, portMAX_DELAY);
+            if (bits & S_START_ACCESS_POINT)
+            {
+                scr4_submenu_id = 1;
+                set_menu_page(false);
+                xEventGroupClearBits(gui_event_group, S_START_ACCESS_POINT);
+            }
+
+            bits = xEventGroupWaitBits(gui_event_group, E_START_ACCESS_POINT, pdFALSE, pdFALSE, portMAX_DELAY);
+            if (bits & E_START_ACCESS_POINT)
+            {
+                xEventGroupClearBits(gui_event_group, E_START_ACCESS_POINT);
+                post_gui_events(START_CONFIG_SERVER, NULL, sizeof(NULL));
+            }
+
+            bits = xEventGroupWaitBits(gui_event_group, E_START_CONFIG_SERVER, pdFALSE, pdFALSE, portMAX_DELAY);
+            if (bits & S_START_CONFIG_SERVER)
+            {
+                scr4_submenu_id = 2;
+                set_menu_page(false);
+                xEventGroupClearBits(gui_event_group, E_START_CONFIG_SERVER);
+            }
+
+            bits = xEventGroupWaitBits(gui_event_group, E_STOP_CONFIG_SERVER, pdFALSE, pdFALSE, portMAX_DELAY);
+            if (bits & E_STOP_CONFIG_SERVER)
+            {
+                xEventGroupClearBits(gui_event_group, E_STOP_CONFIG_SERVER);
+                post_gui_events(STOP_ACCESS_POINT, NULL, sizeof(NULL));
+            }
+
+            bits = xEventGroupWaitBits(gui_event_group, E_STOP_ACCESS_POINT, pdFALSE, pdFALSE, portMAX_DELAY);
+            if (bits & E_STOP_ACCESS_POINT)
+            {
+                scr4_submenu_id = 0;
+                set_menu_page(false);
+                xEventGroupClearBits(gui_event_group, E_STOP_ACCESS_POINT);
+            }
+
+            xSemaphoreGive(config_server_task_lock);
+        }
+    }
+
+    vTaskDelete(NULL);
+}
+
 static void action_menu_page()
 {
     int key_count = 0;
@@ -98,20 +151,29 @@ static void action_menu_page()
         break;
 
     case 2:
-        if (xSemaphoreGetMutexHolder(sync_time_task_lock) == NULL)
+        if (xSemaphoreGetMutexHolder(sync_time_task_lock) == NULL && xSemaphoreGetMutexHolder(config_server_task_lock) == NULL)
         {
-            post_gui_events(START_SYNC_TIME, (void *)&sent_from_gui, sizeof(sent_from_gui));
             xTaskCreate(lv_sync_time_subscreen_task, "sync_time_subscreen_task", 2048, NULL, 0, NULL);
+            post_gui_events(START_SYNC_TIME, (void *)&sent_from_gui, sizeof(sent_from_gui));
         }
         break;
 
     case 3:
-        strncpy(passkey, "pass123456", 64);
-        // random_string(passkey, 10);
-        lv_label_set_text_fmt(label_ap_pass_group_4_1, "\t" LV_SYMBOL_WIFI " key\n%s", passkey);
+        if (xSemaphoreGetMutexHolder(config_server_task_lock) == NULL)
+        {
+            strncpy(passkey, "pass123456", 64);
+            // random_string(passkey, 10);
+            lv_label_set_text_fmt(label_ap_pass_group_4_1, "\t " LV_SYMBOL_WIFI " key\n%s", passkey);
+            lv_obj_align(label_ap_name_group_4_1, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
+            lv_obj_align(label_ap_pass_group_4_1, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
 
-        post_gui_events(START_ACCESS_POINT, (void *)passkey, (strlen(passkey) + 1) * sizeof(passkey));
-        post_gui_events(START_CONFIG_SERVER, NULL, sizeof(NULL));
+            xTaskCreate(lv_config_server_subscreen_task, "config_server_subscreen_task", 2048, NULL, 0, NULL);
+            post_gui_events(START_ACCESS_POINT, (void *)passkey, (strlen(passkey) + 1) * sizeof(passkey));
+        }
+        else
+        {
+            post_gui_events(STOP_CONFIG_SERVER, NULL, sizeof(NULL));
+        }
         break;
     }
 }
@@ -324,6 +386,7 @@ static void lvgl_gui_init_obj()
     lv_obj_align(label_ap_name_group_4_1, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
     lv_obj_align(label_ap_pass_group_4_1, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
     lv_obj_align(image_qr_code_group_4_2, NULL, LV_ALIGN_IN_LEFT_MID, 0, 0);
+    lv_obj_align(label_ip_addr_group_4_2, NULL, LV_ALIGN_IN_RIGHT_MID, 0, 0);
 
     lv_obj_set_size(bar_time_progress_group1, 128, 10);
     lv_bar_set_type(bar_time_progress_group1, LV_BAR_TYPE_SYMMETRICAL);
@@ -377,6 +440,8 @@ void heap_r()
 void lvgl_gui_task()
 {
     sync_time_task_lock = xSemaphoreCreateMutex();
+    config_server_task_lock = xSemaphoreCreateMutex();
+
     rtc_ext_init(RTC_SDA, RTC_SCL);
 
     struct timeval tm = {.tv_sec = rtc_ext_get_time()};

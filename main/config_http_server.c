@@ -417,8 +417,6 @@ static esp_err_t start_config_http_server_private()
 void start_config_http_server()
 {
     ESP_ERROR_CHECK(start_config_http_server_private());
-
-    vTaskDelete(NULL);
 }
 
 void stop_config_http_server()
@@ -426,7 +424,6 @@ void stop_config_http_server()
     if (server != NULL)
     {
         httpd_stop(server);
-        free(server);
         server = NULL;
     }
 
