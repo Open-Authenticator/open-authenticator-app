@@ -388,7 +388,7 @@ static void lvgl_gui_init_obj()
     lv_label_set_text(label_setting_group_4, "\t\t\t\t" LV_SYMBOL_SETTINGS "\nSETTINGS");
     lv_label_set_text(label_ap_name_group_4_1, "connect to open-authenticator " LV_SYMBOL_WIFI);
     lv_label_set_text(label_ap_pass_group_4_1, " ");
-    lv_label_set_text(label_ip_addr_group_4_2, "connect to\n192.168.1.1");
+    lv_label_set_text(label_ip_addr_group_4_2, "connect to\n192.168.4.1");
 
     lv_obj_align(label_time_group_2, NULL, LV_ALIGN_CENTER, 0, 0);
     lv_obj_align(label_sync_time_group_3, NULL, LV_ALIGN_CENTER, 0, 0);
@@ -418,7 +418,7 @@ static void lvgl_gui_init_obj()
     lv_obj_set_width(label_ip_addr_group_4_2, 60);
     lv_obj_align(label_ip_addr_group_4_2, NULL, LV_ALIGN_IN_RIGHT_MID, 0, 0);
 
-    const char *data = "http://192.168.1.1";
+    const char *data = "http://192.168.4.1";
     lv_qrcode_update(image_qr_code_group_4_2, data, strlen(data));
 
     group_root = lv_group_create();
