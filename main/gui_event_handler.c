@@ -46,8 +46,14 @@ static void gui_event_handler(void *handler_args, esp_event_base_t base, int32_t
     else if (id == START_ACCESS_POINT)
     {
         xEventGroupSetBits(gui_event_group, S_START_ACCESS_POINT);
-        start_wifi_access_point("open-authenticator", (char *)event_data);
-        xEventGroupSetBits(gui_event_group, E_START_ACCESS_POINT);
+        if (start_wifi_access_point("open-authenticator", (char *)event_data) == ESP_OK)
+        {
+            xEventGroupSetBits(gui_event_group, E_START_ACCESS_POINT);
+        }
+        else
+        {
+            xEventGroupSetBits(gui_event_group, K_START_ACCESS_POINT);
+        }
     }
     else if (id == STOP_ACCESS_POINT)
     {

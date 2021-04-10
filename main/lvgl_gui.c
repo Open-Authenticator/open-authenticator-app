@@ -99,34 +99,40 @@ static void lv_config_server_subscreen_task()
                 xEventGroupClearBits(gui_event_group, S_START_ACCESS_POINT);
             }
 
-            bits = xEventGroupWaitBits(gui_event_group, E_START_ACCESS_POINT, pdFALSE, pdFALSE, portMAX_DELAY);
+            bits = xEventGroupWaitBits(gui_event_group, E_START_ACCESS_POINT | K_START_ACCESS_POINT, pdFALSE, pdFALSE, portMAX_DELAY);
             if (bits & E_START_ACCESS_POINT)
             {
                 xEventGroupClearBits(gui_event_group, E_START_ACCESS_POINT);
                 post_gui_events(START_CONFIG_SERVER, NULL, sizeof(NULL));
-            }
 
-            bits = xEventGroupWaitBits(gui_event_group, E_START_CONFIG_SERVER, pdFALSE, pdFALSE, portMAX_DELAY);
-            if (bits & S_START_CONFIG_SERVER)
-            {
-                scr4_submenu_id = 2;
-                set_menu_page(false);
-                xEventGroupClearBits(gui_event_group, E_START_CONFIG_SERVER);
-            }
+                bits = xEventGroupWaitBits(gui_event_group, E_START_CONFIG_SERVER, pdFALSE, pdFALSE, portMAX_DELAY);
+                if (bits & S_START_CONFIG_SERVER)
+                {
+                    scr4_submenu_id = 2;
+                    set_menu_page(false);
+                    xEventGroupClearBits(gui_event_group, E_START_CONFIG_SERVER);
+                }
 
-            bits = xEventGroupWaitBits(gui_event_group, E_STOP_CONFIG_SERVER, pdFALSE, pdFALSE, portMAX_DELAY);
-            if (bits & E_STOP_CONFIG_SERVER)
-            {
-                xEventGroupClearBits(gui_event_group, E_STOP_CONFIG_SERVER);
-                post_gui_events(STOP_ACCESS_POINT, NULL, sizeof(NULL));
-            }
+                bits = xEventGroupWaitBits(gui_event_group, E_STOP_CONFIG_SERVER, pdFALSE, pdFALSE, portMAX_DELAY);
+                if (bits & E_STOP_CONFIG_SERVER)
+                {
+                    xEventGroupClearBits(gui_event_group, E_STOP_CONFIG_SERVER);
+                    post_gui_events(STOP_ACCESS_POINT, NULL, sizeof(NULL));
+                }
 
-            bits = xEventGroupWaitBits(gui_event_group, E_STOP_ACCESS_POINT, pdFALSE, pdFALSE, portMAX_DELAY);
-            if (bits & E_STOP_ACCESS_POINT)
+                bits = xEventGroupWaitBits(gui_event_group, E_STOP_ACCESS_POINT, pdFALSE, pdFALSE, portMAX_DELAY);
+                if (bits & E_STOP_ACCESS_POINT)
+                {
+                    scr4_submenu_id = 0;
+                    set_menu_page(false);
+                    xEventGroupClearBits(gui_event_group, E_STOP_ACCESS_POINT);
+                }
+            }
+            else if (bits & K_START_ACCESS_POINT)
             {
                 scr4_submenu_id = 0;
                 set_menu_page(false);
-                xEventGroupClearBits(gui_event_group, E_STOP_ACCESS_POINT);
+                xEventGroupClearBits(gui_event_group, K_START_ACCESS_POINT);
             }
 
             xSemaphoreGive(config_server_task_lock);
@@ -169,6 +175,10 @@ static void action_menu_page()
 
             xTaskCreate(lv_config_server_subscreen_task, "config_server_subscreen_task", 2048, NULL, 0, NULL);
             post_gui_events(START_ACCESS_POINT, (void *)passkey, (strlen(passkey) + 1) * sizeof(passkey));
+        }
+        else if (scr4_submenu_id == 1)
+        {
+            stop_wifi_access_point();
         }
         else
         {
