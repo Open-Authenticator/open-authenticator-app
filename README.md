@@ -1,9 +1,25 @@
 # Open Authenticator App
 
-**Open Authenticator** is an open source TOTP based hardware **authenticator** using
-**ESP32**. This is the **esp-idf** firmware for the [custom
-hardware](https://github.com/Open-Authenticator/hardware-design) built for this
-purpose.
+<br />
+<p align="center">
+  <a href="https://github.com/Open-Authenticator">
+    <img src="./assets/open-autheticator-logo.png" alt="Logo" width="200" height="200">
+  </a>
+
+  <p align="center">
+  <b>Open Authenticator</b> is an open source TOTP based hardware <b>authenticator</b> using
+  <b>ESP32</b>. This is the <b>esp-idf</b> firmware for the <a href="https://github.com/Open-Authenticator/hardware-design">custom hardware</a> built for this purpose.
+    <br/>
+    <!-- <br/>
+    <a href="https://simppru.readthedocs.io/en/latest/"><strong>Explore the docs »</strong></a>
+    <br /> -->
+    <a href="https://github.com/Open-Authenticator/open-authenticator-app/issues">Report Bug</a>
+    .
+    <a href="https://github.com/Open-Authenticator/open-authenticator-app/issues">Request Feature</a>
+    ·
+    <a href="https://github.com/Open-Authenticator/open-authenticator-app/pulls">Send a Pull Request</a>
+  </p>
+</p>
 
 ## Requirements
 
