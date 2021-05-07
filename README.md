@@ -21,6 +21,17 @@
   </p>
 </p>
 
+<p align="center">
+<img alt="GitHub watchers" src="https://img.shields.io/github/watchers/open-authenticator/open-authenticator-app?style=plastic">
+<img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/open-authenticator/open-authenticator-app?style=plastic">
+<img alt="GitHub forks" src="https://img.shields.io/github/forks/open-authenticator/open-authenticator-app?style=plastic">
+<img alt="GitHub issues" src="https://img.shields.io/github/issues/open-authenticator/open-authenticator-app?style=plastic">
+<img alt="GitHub forks" src="https://img.shields.io/github/forks/open-authenticator/open-authenticator-app?style=plastic">
+<img alt="GitHub repo size" src="https://img.shields.io/github/repo-size/open-authenticator/open-authenticator-app?style=plastic">
+<img alt="GitHub license" src="https://img.shields.io/github/license/open-authenticator/open-authenticator-app?style=plastic">
+<img alt="Twitter Follow" src="https://img.shields.io/twitter/follow/ve0x10?style=social">
+</p>
+
 ## Requirements
 
 * *ESP-IDF* **v4.2** (*release/v4.2*)
