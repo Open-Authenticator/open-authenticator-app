@@ -10,3 +10,7 @@
 [submodule "components/qr-code-generator-component"]
 	path = components/qr-code-generator-component
 	url = https://github.com/Open-Authenticator/qr-code-generator-component.git
+[submodule "oa_store/www"]
+	path = oa_store/www
+	url = https://github.com/Open-Authenticator/open-authenticator-website.git
+	branch = gh-pages
