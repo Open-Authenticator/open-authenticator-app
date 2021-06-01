@@ -6,14 +6,16 @@ ESP_EVENT_DEFINE_BASE(OPEN_AUTHENTICATOR_EVENTS);
 static esp_event_loop_handle_t gui_event_handle = NULL;
 static const char *TAG = "gui_event_handler";
 
+static bool access_point_mode_enabled = false;
+
 static void action_connect_to_wifi()
 {
     char *wifi_creds = read_wifi_creds();
     if (wifi_creds == NULL)
     {
         return;
-    }
-
+    }     
+    esp_err_t err
     esp_err_t err;
     do
     {
@@ -37,7 +39,10 @@ static void gui_event_handler(void *handler_args, esp_event_base_t base, int32_t
         { 
             xEventGroupSetBits(gui_event_group, S_SYNC_TIME_BIT);
         }
-        action_connect_to_wifi();
+        if (!access_point_mode_enabled)
+        {
+            action_connect_to_wifi();
+        }
         if (*(bool *)event_data)
         {
             xEventGroupSetBits(gui_event_group, E_SYNC_TIME_BIT);
@@ -49,10 +54,12 @@ static void gui_event_handler(void *handler_args, esp_event_base_t base, int32_t
         if (start_wifi_access_point("open-authenticator", (char *)event_data) == ESP_OK)
         {
             xEventGroupSetBits(gui_event_group, E_START_ACCESS_POINT);
+            access_point_mode_enabled = true;
         }
         else
         {
             xEventGroupSetBits(gui_event_group, K_START_ACCESS_POINT);
+            access_point_mode_enabled = false;
         }
     }
     else if (id == STOP_ACCESS_POINT)
@@ -60,6 +67,7 @@ static void gui_event_handler(void *handler_args, esp_event_base_t base, int32_t
         xEventGroupSetBits(gui_event_group, S_STOP_ACCESS_POINT);
         stop_wifi_access_point();
         xEventGroupSetBits(gui_event_group, E_STOP_ACCESS_POINT);
+        access_point_mode_enabled = false;
     }
     else if (id == START_CONFIG_SERVER)
     {
