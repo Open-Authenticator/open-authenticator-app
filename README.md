@@ -1,37 +1,6 @@
 # Open Authenticator App
 
-<br />
-<p align="center">
-  <a href="https://github.com/Open-Authenticator">
-    <img src="./assets/open-autheticator-logo.png" alt="Logo" width="200" height="200">
-  </a>
-
-  <p align="center">
-  <b>Open Authenticator</b> is an open source TOTP based hardware <b>authenticator</b> using
-  <b>ESP32</b>. This is the <b>esp-idf</b> firmware for the <a href="https://github.com/Open-Authenticator/hardware-design">custom hardware</a> built for this purpose.
-    <br/>
-    <!-- <br/>
-    <a href="https://simppru.readthedocs.io/en/latest/"><strong>Explore the docs »</strong></a>
-    <br /> -->
-    <a href="https://github.com/Open-Authenticator/open-authenticator-app/issues">Report Bug</a>
-    .
-    <a href="https://github.com/Open-Authenticator/open-authenticator-app/issues">Request Feature</a>
-    ·
-    <a href="https://github.com/Open-Authenticator/open-authenticator-app/pulls">Send a Pull Request</a>
-  </p>
-</p>
-
-<p align="center">
-<img alt="GitHub watchers" src="https://img.shields.io/github/watchers/open-authenticator/open-authenticator-app?style=plastic">
-<img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/open-authenticator/open-authenticator-app?style=plastic">
-<img alt="GitHub forks" src="https://img.shields.io/github/forks/open-authenticator/open-authenticator-app?style=plastic">
-<img alt="GitHub issues" src="https://img.shields.io/github/issues/open-authenticator/open-authenticator-app?style=plastic">
-<img alt="GitHub forks" src="https://img.shields.io/github/forks/open-authenticator/open-authenticator-app?style=plastic">
-<img alt="GitHub repo size" src="https://img.shields.io/github/repo-size/open-authenticator/open-authenticator-app?style=plastic">
-<img alt="GitHub license" src="https://img.shields.io/github/license/open-authenticator/open-authenticator-app?style=plastic">
-<img alt="Twitter Follow" src="https://img.shields.io/twitter/follow/ve0x10?style=social">
-</p>
-
+https://github.com/espressif/esp32c3-direct-boot-example
 ## Requirements
 
 * *ESP-IDF* **v4.2** (*release/v4.2*)
