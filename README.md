@@ -1,6 +1,5 @@
 # Open Authenticator App
 
-https://github.com/espressif/esp32c3-direct-boot-example
 ## Requirements
 
 * *ESP-IDF* **v4.2** (*release/v4.2*)

@@ -15,7 +15,7 @@ static void action_connect_to_wifi()
     {
         return;
     }     
-    esp_err_t err
+
     esp_err_t err;
     do
     {
