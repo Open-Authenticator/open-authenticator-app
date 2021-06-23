@@ -1,0 +1,17 @@
+name: SOpen Authenticator build
+on: [push, pull_request]
+
+jobs:
+  build-test:
+    name: Test Build of Open Authenticator firmware
+    runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:release-v4.1
+    steps:  
+      - uses: actions/checkout@v2
+        with: 
+          submodules: 'recursive'
+      - name: Testing open authenticator app
+        run: |
+          . $IDF_PATH/export.sh
+          idf.py build
