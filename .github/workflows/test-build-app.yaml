@@ -1,13 +1,21 @@
-name: SOpen Authenticator build
+name: Open Authenticator build
 on: [push, pull_request]
 
 jobs:
   build-test:
     name: Test Build of Open Authenticator firmware
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     container:
       image: espressif/idf:release-v4.1
     steps:  
+      - name: Preinstall github binary
+        run: |
+          apt-get update
+          apt-get install -y software-properties-common
+          apt-get update
+          add-apt-repository -y ppa:git-core/ppa
+          apt-get update
+          apt-get install -y git    
       - uses: actions/checkout@v2
         with: 
           submodules: 'recursive'
