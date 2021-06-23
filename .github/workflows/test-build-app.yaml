@@ -6,7 +6,7 @@ jobs:
     name: Test Build of Open Authenticator firmware
     runs-on: ubuntu-20.04
     container:
-      image: espressif/idf:release-v4.1
+      image: espressif/idf:release-v4.2
     steps:  
       - name: Preinstall github binary
         run: |
