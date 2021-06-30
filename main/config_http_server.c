@@ -272,6 +272,13 @@ static esp_err_t read_alias_list_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+static esp_err_t ping_device_status(httpd_req_t *req)
+{
+    httpd_resp_sendstr(req, "working");
+
+    return ESP_OK;
+}
+
 static esp_err_t write_alias_key_handler(httpd_req_t *req)
 {
     int total_len = req->content_len;
@@ -395,6 +402,17 @@ static esp_err_t start_config_http_server_private()
         .handler = write_alias_key_handler,
         .user_ctx = NULL};
     if (httpd_register_uri_handler(server, &write_alias_key_list_post_uri) != ESP_OK)
+    {
+        ESP_LOGE(TAG, "register post uri failed");
+        return ESP_FAIL;
+    }
+
+    httpd_uri_t ping_device_status_get_uri = {
+        .uri = "/api/v1/device/status",
+        .method = HTTP_GET,
+        .handler = ping_device_status,
+        .user_ctx = NULL};
+    if (httpd_register_uri_handler(server, &ping_device_status_get_uri) != ESP_OK)
     {
         ESP_LOGE(TAG, "register post uri failed");
         return ESP_FAIL;
