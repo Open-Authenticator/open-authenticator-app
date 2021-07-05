@@ -24,8 +24,8 @@ static lv_obj_t *scr4[3] = {NULL, NULL, NULL};
 
 lv_indev_t *my_indev = NULL;
 
-lv_task_t *task_time_update = NULL;
-lv_task_t *task_key_update_task = NULL;
+lv_timer_t *task_time_update = NULL;
+lv_timer_t *task_key_update_task = NULL;
 
 static int menu_id = 0;
 static int key_id = 0;
@@ -153,7 +153,7 @@ static void action_menu_page()
     case 0:
         key_count = read_totp_key_count();
         key_id = key_count >= 0 ? ((key_id + 1) % key_count + key_count) % key_count : 0;
-        lv_task_ready(task_key_update_task);
+        lv_timer_ready(task_key_update_task);
         break;
 
     case 2:
@@ -170,8 +170,8 @@ static void action_menu_page()
             strncpy(passkey, "pass123456", 64);
             // random_string(passkey, 10);
             lv_label_set_text_fmt(label_ap_pass_group_4_1, "\t " LV_SYMBOL_WIFI " key\n%s", passkey);
-            lv_obj_align(label_ap_name_group_4_1, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
-            lv_obj_align(label_ap_pass_group_4_1, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
+            lv_obj_align(label_ap_name_group_4_1, LV_ALIGN_TOP_MID, 0, 0);
+            lv_obj_align(label_ap_pass_group_4_1, LV_ALIGN_BOTTOM_MID, 0, 0);
 
             xTaskCreate(lv_config_server_subscreen_task, "config_server_subscreen_task", 2048, NULL, 0, NULL);
             post_gui_events(START_ACCESS_POINT, (void *)passkey, (strlen(passkey) + 1) * sizeof(passkey));
@@ -212,7 +212,7 @@ static void set_menu_page(bool use_anim)
     }
 }
 
-static void lv_time_update_task(lv_task_t *task)
+static void lv_time_update_task(lv_timer_t *task)
 {
     char time[50];
     struct tm time_now;
@@ -221,10 +221,10 @@ static void lv_time_update_task(lv_task_t *task)
 
     snprintf(time, 50, "%02d:%02d:%02d", time_now.tm_hour, time_now.tm_min, time_now.tm_sec);
     lv_label_set_text(label_time_group_2, time);
-    lv_obj_align(label_time_group_2, NULL, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_align(label_time_group_2, LV_ALIGN_CENTER, 0, 0);
 }
 
-static void lv_key_update_task(lv_task_t *task)
+static void lv_key_update_task(lv_timer_t *task)
 {
     totp_key_creds key_temp;
     int key_count = read_totp_key_count();
@@ -240,19 +240,19 @@ static void lv_key_update_task(lv_task_t *task)
         lv_label_set_text(label_alias_group_1, key_temp.alias);
         lv_label_set_text(label_code_group_1, result);
 
-        lv_obj_align(label_alias_group_1, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
-        lv_obj_align(label_code_group_1, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
+        lv_obj_align(label_alias_group_1, LV_ALIGN_TOP_MID, 0, 0);
+        lv_obj_align(label_code_group_1, LV_ALIGN_BOTTOM_MID, 0, 0);
 
         float bar_val = 100.0 * ((unsigned)time(NULL) % 30) / 30.0;
-        lv_obj_set_hidden(bar_time_progress_group1, false);
+        lv_obj_clear_flag(bar_time_progress_group1, LV_OBJ_FLAG_HIDDEN);
         lv_bar_set_value(bar_time_progress_group1, (int)ceil(bar_val), LV_ANIM_ON);
     }
     else
     {
         lv_label_set_text(label_alias_group_1, "No keys\nenrolled");
         lv_label_set_text(label_code_group_1, " ");
-        lv_obj_set_hidden(bar_time_progress_group1, true);
-        lv_obj_align(label_alias_group_1, NULL, LV_ALIGN_CENTER, 0, 0);
+        lv_obj_add_flag(bar_time_progress_group1, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_align(label_alias_group_1, LV_ALIGN_CENTER, 0, 0);
     }
 }
 
@@ -291,17 +291,19 @@ bool encoder_with_switches(lv_indev_drv_t *drv, lv_indev_data_t *data)
     return false;
 }
 
-static void switch_event_handler_cb(lv_obj_t *obj, lv_event_t event)
+static void switch_event_handler_cb(lv_event_t *event)
 {
     uint32_t *key_id = NULL;
-    if (event == LV_EVENT_PRESSED)
+    lv_event_code_t code = lv_event_get_code(event);
+
+    if (code == LV_EVENT_PRESSED)
     {
         ESP_LOGI("button_cb", "Clicked button - enter");
         action_menu_page();
     }
-    else if (event == LV_EVENT_KEY)
+    else if (code == LV_EVENT_KEY)
     {
-        key_id = (uint32_t *)lv_event_get_data();
+        key_id = (uint32_t *)lv_event_get_user_data(event);
         ESP_LOGI("button_cb", "Clicked button - %u", *key_id);
 
         if (*key_id == LV_KEY_UP)
@@ -358,26 +360,26 @@ static void lvgl_gui_init_drivers()
 
 static void lvgl_gui_init_obj()
 {
-    scr1 = lv_obj_create(NULL, NULL);
-    scr2 = lv_obj_create(NULL, NULL);
-    scr3[0] = lv_obj_create(NULL, NULL);
-    scr3[1] = lv_obj_create(NULL, NULL);
-    scr4[0] = lv_obj_create(NULL, NULL);
-    scr4[1] = lv_obj_create(NULL, NULL);
-    scr4[2] = lv_obj_create(NULL, NULL);
+    scr1 = lv_obj_create(NULL);
+    scr2 = lv_obj_create(NULL);
+    scr3[0] = lv_obj_create(NULL);
+    scr3[1] = lv_obj_create(NULL);
+    scr4[0] = lv_obj_create(NULL);
+    scr4[1] = lv_obj_create(NULL);
+    scr4[2] = lv_obj_create(NULL);
 
-    dummy_obj_event_handler = lv_obj_create(NULL, NULL);
-    label_battery_group_root = lv_label_create(scr1, NULL);
-    label_alias_group_1 = lv_label_create(scr1, NULL);
-    bar_time_progress_group1 = lv_bar_create(scr1, NULL);
-    label_code_group_1 = lv_label_create(scr1, NULL);
-    label_time_group_2 = lv_label_create(scr2, NULL);
-    label_sync_time_group_3 = lv_label_create(scr3[0], NULL);
-    label_sync_time_spinner_group_3 = lv_spinner_create(scr3[1], NULL);
-    label_setting_group_4 = lv_label_create(scr4[0], NULL);
-    label_ap_name_group_4_1 = lv_label_create(scr4[1], NULL);
-    label_ap_pass_group_4_1 = lv_label_create(scr4[1], NULL);
-    label_ip_addr_group_4_2 = lv_label_create(scr4[2], NULL);
+    dummy_obj_event_handler = lv_obj_create(NULL);
+    label_battery_group_root = lv_label_create(scr1);
+    label_alias_group_1 = lv_label_create(scr1);
+    bar_time_progress_group1 = lv_bar_create(scr1);
+    label_code_group_1 = lv_label_create(scr1);
+    label_time_group_2 = lv_label_create(scr2);
+    label_sync_time_group_3 = lv_label_create(scr3[0]);
+    label_sync_time_spinner_group_3 = lv_spinner_create(scr3[1], 100, 60);
+    label_setting_group_4 = lv_label_create(scr4[0]);
+    label_ap_name_group_4_1 = lv_label_create(scr4[1]);
+    label_ap_pass_group_4_1 = lv_label_create(scr4[1]);
+    label_ip_addr_group_4_2 = lv_label_create(scr4[2]);
     image_qr_code_group_4_2 = lv_qrcode_create(scr4[2], 64, lv_color_hex3(0x000), lv_color_hex3(0xfff));
 
     lv_label_set_text(label_battery_group_root, " ");
@@ -390,33 +392,31 @@ static void lvgl_gui_init_obj()
     lv_label_set_text(label_ap_pass_group_4_1, " ");
     lv_label_set_text(label_ip_addr_group_4_2, "connect to\n192.168.4.1");
 
-    lv_obj_align(label_time_group_2, NULL, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_align(label_sync_time_group_3, NULL, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_align(label_setting_group_4, NULL, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_align(label_ap_name_group_4_1, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
-    lv_obj_align(label_ap_pass_group_4_1, NULL, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
-    lv_obj_align(image_qr_code_group_4_2, NULL, LV_ALIGN_IN_LEFT_MID, 0, 0);
-    lv_obj_align(label_ip_addr_group_4_2, NULL, LV_ALIGN_IN_RIGHT_MID, 0, 0);
+    lv_obj_align(label_time_group_2, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_align(label_sync_time_group_3, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_align(label_setting_group_4, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_align(label_ap_name_group_4_1, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_align(label_ap_pass_group_4_1, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_align(image_qr_code_group_4_2, LV_ALIGN_LEFT_MID, 0, 0);
+    lv_obj_align(label_ip_addr_group_4_2, LV_ALIGN_RIGHT_MID, 0, 0);
 
     lv_obj_set_size(bar_time_progress_group1, 128, 10);
     lv_bar_set_type(bar_time_progress_group1, LV_BAR_TYPE_SYMMETRICAL);
-    lv_obj_align(bar_time_progress_group1, NULL, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_align(bar_time_progress_group1, LV_ALIGN_CENTER, 0, 0);
 
-    lv_obj_set_size(label_sync_time_spinner_group_3, 60, 60);
     lv_spinner_set_type(label_sync_time_spinner_group_3, LV_SPINNER_TYPE_FILLSPIN_ARC);
-    lv_spinner_set_arc_length(label_sync_time_spinner_group_3, (lv_anim_value_t)100);
     lv_obj_set_style_local_line_width(label_sync_time_spinner_group_3, LV_SPINNER_PART_INDIC, LV_STATE_DEFAULT, 5);
     lv_obj_set_style_local_border_opa(label_sync_time_spinner_group_3, LV_SPINNER_PART_BG, LV_STATE_DEFAULT, 0);
     lv_obj_set_style_local_border_opa(label_sync_time_spinner_group_3, LV_ARC_PART_BG, LV_STATE_DEFAULT, 0);
     lv_obj_set_style_local_radius(label_sync_time_spinner_group_3, LV_SPINNER_PART_INDIC, LV_STATE_DEFAULT, 10);
-    lv_obj_align(label_sync_time_spinner_group_3, NULL, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_align(label_sync_time_spinner_group_3, LV_ALIGN_CENTER, 0, 0);
 
     lv_label_set_long_mode(label_ap_name_group_4_1, LV_LABEL_LONG_SROLL_CIRC);
     lv_obj_set_width(label_ap_name_group_4_1, 128);
 
     lv_label_set_long_mode(label_ip_addr_group_4_2, LV_LABEL_LONG_SROLL_CIRC);
     lv_obj_set_width(label_ip_addr_group_4_2, 60);
-    lv_obj_align(label_ip_addr_group_4_2, NULL, LV_ALIGN_IN_RIGHT_MID, 0, 0);
+    lv_obj_align(label_ip_addr_group_4_2, LV_ALIGN_RIGHT_MID, 0, 0);
 
     const char *data = "http://192.168.4.1";
     lv_qrcode_update(image_qr_code_group_4_2, data, strlen(data));
@@ -460,15 +460,15 @@ void lvgl_gui_task()
     lvgl_gui_init_drivers();
     lvgl_gui_init_obj();
 
-    task_time_update = lv_task_create(lv_time_update_task, 1000, LV_TASK_PRIO_HIGH, NULL);
-    task_key_update_task = lv_task_create(lv_key_update_task, 1000, LV_TASK_PRIO_HIGHEST, NULL);
-    lv_task_t *temp = lv_task_create(heap_r, 3000, LV_TASK_PRIO_HIGH, NULL);
-    lv_task_ready(task_time_update);
-    lv_task_ready(task_key_update_task);
+    task_time_update = lv_timer_create(lv_time_update_task, 1000, NULL);
+    task_key_update_task = lv_timer_create(lv_key_update_task, 1000, NULL);
+    lv_timer_t *temp = lv_timer_create(heap_r, 3000, NULL);
+    lv_timer_ready(task_time_update);
+    lv_timer_ready(task_key_update_task);
 
     while (1)
     {
-        lv_task_handler();
+        lv_timer_handler();
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 
